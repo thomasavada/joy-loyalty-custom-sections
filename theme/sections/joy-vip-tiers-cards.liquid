@@ -1,0 +1,1067 @@
+{% comment %}
+  Joy Loyalty - VIP Tiers Cards Section
+  This section displays VIP tier information in a card layout
+{% endcomment %}
+
+<div class="joy-vip-tiers-cards-section" data-section-id="{{ section.id }}">
+  <style>
+    .joy-vip-tiers-cards-section {
+      width: 100%;
+      background: {{ section.settings.background_color | default: '#1A1A1A' }};
+      {% if section.settings.background_image %}
+        background-image: url('{{ section.settings.background_image | img_url: 'master' }}');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      {% endif %}
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: {{ section.settings.text_color | default: '#FFFFFF' }};
+    }
+
+    .joy-vip-tiers-cards-container {
+      max-width: {{ section.settings.max_width | default: '1200px' }};
+      margin: 0 auto;
+      padding: {{ section.settings.section_padding | default: 60 }}px 24px;
+      text-align: center;
+    }
+
+    .joy-tiers-cards-header {
+      margin-bottom: {{ section.settings.header_margin_bottom | default: 48 }}px;
+    }
+
+    .joy-tiers-cards-title {
+      font-size: {{ section.settings.title_size | default: 42 }}px;
+      color: {{ section.settings.title_color | default: '#FFFFFF' }};
+      margin: 0 0 16px 0;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+
+    .joy-tiers-cards-subtitle {
+      font-size: {{ section.settings.subtitle_size | default: 22 }}px;
+      color: {{ section.settings.subtitle_color | default: '#FF6B35' }};
+      margin: 0;
+      line-height: 1.3;
+      font-weight: 600;
+    }
+
+    .joy-tiers-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax({{ section.settings.card_min_width | default: 250 }}px, 1fr));
+      gap: {{ section.settings.card_gap | default: 24 }}px;
+      margin-bottom: {{ section.settings.button_margin_top | default: 48 }}px;
+    }
+
+    .joy-tier-card {
+      background: {{ section.settings.card_background | default: '#FF6B35' }};
+      border-radius: {{ section.settings.card_border_radius | default: 16 }}px;
+      padding: {{ section.settings.card_padding | default: 32 }}px {{ section.settings.card_padding_x | default: 24 }}px;
+      padding-top: calc({{ section.settings.card_padding | default: 32 }}px + 16px);
+      position: relative;
+      transition: all 0.3s ease;
+      text-align: center;
+      min-height: {{ section.settings.card_min_height | default: 400 }}px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .joy-tier-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .joy-tier-card-header {
+      margin-bottom: 24px;
+    }
+
+    .joy-tier-card-points {
+      color: {{ section.settings.points_text_color | default: '#FFFFFF' }};
+      padding: 8px 16px;
+      border-radius: 16px 16px 0 0;
+      font-size: {{ section.settings.points_text_size | default: 12 }}px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      position: absolute;
+      top: -32px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      white-space: nowrap;
+    }
+
+    .joy-tier-card.tier-1 .joy-tier-card-points {
+      background: {{ section.settings.tier_1_color | default: '#FF6B35' | color_modify: 'alpha', 0.8 }};
+    }
+
+    .joy-tier-card.tier-2 .joy-tier-card-points {
+      background: {{ section.settings.tier_2_color | default: '#FF8C42' | color_modify: 'alpha', 0.8 }};
+    }
+
+    .joy-tier-card.tier-3 .joy-tier-card-points {
+      background: {{ section.settings.tier_3_color | default: '#D2691E' | color_modify: 'alpha', 0.8 }};
+    }
+
+    .joy-tier-card.tier-4 .joy-tier-card-points {
+      background: {{ section.settings.tier_4_color | default: '#8B4513' | color_modify: 'alpha', 0.8 }};
+    }
+
+    .joy-tier-card.tier-5 .joy-tier-card-points {
+      background: {{ section.settings.tier_5_color | default: '#5D2D0C' | color_modify: 'alpha', 0.8 }};
+    }
+
+    .joy-tier-card-icon {
+      width: {{ section.settings.icon_size | default: 120 }}px;
+      height: {{ section.settings.icon_size | default: 120 }}px;
+      margin: 0 auto 20px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+
+    .joy-tier-card-icon svg,
+    .joy-tier-card-icon img {
+      width: {{ section.settings.icon_image_size | default: 60 }}px;
+      height: {{ section.settings.icon_image_size | default: 60 }}px;
+      fill: {{ section.settings.icon_color | default: '#FFFFFF' }};
+      color: {{ section.settings.icon_color | default: '#FFFFFF' }};
+    }
+
+    .joy-tier-card-icon-fallback {
+      font-size: {{ section.settings.icon_fallback_size | default: 48 }}px;
+      color: {{ section.settings.icon_color | default: '#FFFFFF' }};
+    }
+
+    .joy-tier-card-name {
+      font-size: {{ section.settings.card_title_size | default: 20 }}px;
+      font-weight: 700;
+      color: {{ section.settings.card_title_color | default: '#FFFFFF' }};
+      margin: 0 0 20px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .joy-tier-card-perks {
+      flex: 1;
+      text-align: left;
+    }
+
+    .joy-tier-perk {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      font-size: {{ section.settings.perk_text_size | default: 14 }}px;
+      color: {{ section.settings.perk_text_color | default: '#FFFFFF' }};
+      line-height: 1.4;
+    }
+
+    .joy-tier-perk-bullet {
+      color: {{ section.settings.perk_bullet_color | default: '#FFFFFF' }};
+      margin-right: 8px;
+      font-weight: bold;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .joy-tier-perk-text {
+      font-weight: 500;
+    }
+
+    .joy-tier-join-button {
+      background: {{ section.settings.join_button_background | default: '#FFFFFF' }};
+      color: {{ section.settings.join_button_color | default: '#FF6B35' }};
+      border: none;
+      padding: 16px 32px;
+      border-radius: {{ section.settings.join_button_border_radius | default: 8 }}px;
+      font-size: {{ section.settings.join_button_text_size | default: 16 }}px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+      margin-top: 24px;
+    }
+
+    .joy-tier-join-button:hover {
+      background: {{ section.settings.join_button_hover_background | default: '#F0F0F0' }};
+      transform: translateY(-2px);
+    }
+
+    .joy-main-join-button {
+      background: {{ section.settings.main_button_background | default: '#FF6B35' }};
+      color: {{ section.settings.main_button_color | default: '#FFFFFF' }};
+      border: none;
+      padding: 12px 32px;
+      border-radius: {{ section.settings.main_button_border_radius | default: 8 }}px;
+      font-size: {{ section.settings.main_button_text_size | default: 16 }}px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-block;
+      text-decoration: none;
+    }
+
+    /* Individual tier colors */
+    .joy-tier-card.tier-1 {
+      background: {{ section.settings.tier_1_color | default: '#FF6B35' }};
+    }
+
+    .joy-tier-card.tier-2 {
+      background: {{ section.settings.tier_2_color | default: '#FF8C42' }};
+    }
+
+    .joy-tier-card.tier-3 {
+      background: {{ section.settings.tier_3_color | default: '#D2691E' }};
+    }
+
+    .joy-tier-card.tier-4 {
+      background: {{ section.settings.tier_4_color | default: '#8B4513' }};
+    }
+
+    .joy-tier-card.tier-5 {
+      background: {{ section.settings.tier_5_color | default: '#5D2D0C' }};
+    }
+
+    .joy-tier-current {
+      border: 3px solid {{ section.settings.current_tier_border_color | default: '#FFD700' }};
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+    }
+
+    /* Loading state */
+    .joy-tiers-loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 200px;
+      color: {{ section.settings.loading_color | default: '#FFFFFF' }};
+      font-size: 18px;
+    }
+
+    .joy-tiers-error {
+      background: rgba(220, 38, 38, 0.1);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      border-radius: 8px;
+      padding: 24px;
+      color: {{ section.settings.error_color | default: '#FCA5A5' }};
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .joy-vip-tiers-cards-container {
+        padding: {{ section.settings.section_padding_mobile | default: 40 }}px 16px;
+      }
+
+      .joy-tiers-cards-title {
+        font-size: {{ section.settings.title_size_mobile | default: 28 }}px;
+      }
+
+      .joy-tiers-cards-subtitle {
+        font-size: {{ section.settings.subtitle_size_mobile | default: 18 }}px;
+      }
+
+      .joy-tiers-cards-grid {
+        grid-template-columns: 1fr;
+        gap: {{ section.settings.card_gap_mobile | default: 20 }}px;
+      }
+
+      .joy-tier-card {
+        padding: {{ section.settings.card_padding_mobile | default: 24 }}px {{ section.settings.card_padding_x_mobile | default: 20 }}px;
+      }
+    }
+  </style>
+
+  <div class="joy-vip-tiers-cards-container">
+    {% if section.settings.show_header %}
+    <div class="joy-tiers-cards-header">
+      <h2 class="joy-tiers-cards-title">{{ section.settings.title | default: 'LOYALTY LOOKS GOOD ON YOU' }}</h2>
+      {% if section.settings.subtitle %}
+        <p class="joy-tiers-cards-subtitle">{{ section.settings.subtitle | default: 'Premium Perks await with Redber Reward Tiers' }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <joy-vip-tiers-cards
+      data-section-id="{{ section.id }}"
+      data-customer-id="{{ customer.id | default: '' }}"
+    >
+    </joy-vip-tiers-cards>
+  </div>
+</div>
+
+<script>
+if (!customElements.get('joy-vip-tiers-cards')) {
+  customElements.define('joy-vip-tiers-cards', class JoyVipTiersCards extends HTMLElement {
+    constructor() {
+      super();
+      this.sectionId = this.dataset.sectionId;
+      this.customerId = this.dataset.customerId;
+      this.currentCustomerTier = null;
+    }
+
+    connectedCallback() {
+      console.log('Joy VIP Tiers Cards component connected for section:', this.sectionId);
+      this.initializeJoyIntegration();
+    }
+
+    initializeJoyIntegration() {
+      window.addEventListener('joy:ready', () => {
+        console.log('joy:ready event received for VIP tiers cards');
+        this.loadTiers();
+      });
+
+      if (window.joyInstance) {
+        console.log('Joy instance already available for VIP tiers cards');
+        this.loadTiers();
+      }
+    }
+
+    async loadTiers() {
+      const joyInstance = window.joyInstance;
+
+      if (!joyInstance) {
+        console.log('Joy instance not available on window.joyInstance');
+        this.showError('Joy SDK not loaded');
+        return;
+      }
+
+      if (typeof joyInstance.tiers !== 'function') {
+        console.warn('tiers method not available on Joy instance');
+        this.showError('Joy SDK not properly initialized');
+        return;
+      }
+
+      try {
+        // Get customer tier if logged in
+        if (window.AVADA_JOY?.customer?.vipTier?.tierName) {
+          this.currentCustomerTier = window.AVADA_JOY.customer.vipTier.tierName;
+        }
+
+        // Fetch tiers data
+        const tiersData = await joyInstance.tiers();
+        console.log('Joy tiers data:', tiersData);
+
+        if (tiersData && Array.isArray(tiersData) && tiersData.length > 0) {
+          // Filter out inactive tiers and sort by targetPoint, then position
+          const activeTiers = tiersData
+            .filter(tier => !tier.inactive)
+            .sort((a, b) => {
+              // First try to sort by targetPoint (points required)
+              const aPoints = a.targetPoint || 0;
+              const bPoints = b.targetPoint || 0;
+              if (aPoints !== bPoints) {
+                return aPoints - bPoints;
+              }
+              
+              // If targetPoint is the same, sort by position
+              const aPos = a.position !== undefined ? a.position : 999;
+              const bPos = b.position !== undefined ? b.position : 999;
+              return aPos - bPos;
+            });
+          
+          if (activeTiers.length > 0) {
+            this.renderTiersCards(activeTiers);
+          } else {
+            console.log('No active VIP tiers found');
+            this.showError('No VIP tiers configured');
+          }
+        } else {
+          console.log('No VIP tiers found');
+          this.showError('No VIP tiers configured');
+        }
+      } catch (error) {
+        console.error('Error fetching tiers:', error);
+        this.showError('Error loading VIP tiers: ' + (error.message || 'Unknown error'));
+      }
+    }
+
+    renderTiersCards(tiers) {
+      let html = '<div class="joy-tiers-cards-grid">';
+      
+      tiers.forEach((tier, index) => {
+        console.log("For each tier", tier);
+        const isCurrentTier = this.currentCustomerTier === tier.name;
+        const tierClass = `tier-${Math.min(index + 1, 5)}`;
+        
+        html += `
+          <div class="joy-tier-card ${tierClass} ${isCurrentTier ? 'joy-tier-current' : ''}">
+            ${this.formatTierPoints(tier)}
+            <div class="joy-tier-card-header">
+              <div class="joy-tier-card-icon">
+                ${this.renderTierIcon(tier)}
+              </div>
+              <h3 class="joy-tier-card-name">${tier.name}</h3>
+            </div>
+            <div class="joy-tier-card-perks">
+              ${this.renderTierPerks(tier)}
+            </div>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+
+      // Add main join button if configured
+      if ('{{ section.settings.show_main_button }}' === 'true') {
+        html += `
+          <a href="{{ section.settings.main_button_link | default: '/pages/loyalty' }}" class="joy-main-join-button">
+            {{ section.settings.main_button_text | default: 'JOIN NOW' }}
+          </a>
+        `;
+      }
+
+      this.innerHTML = html;
+    }
+
+    formatTierPoints(tier) {
+      if (tier.targetPoint && tier.targetPoint > 0) {
+        return `<div class="joy-tier-card-points">${tier.targetPoint}+ POINTS</div>`;
+      }
+      
+      if (tier.descriptionBlock && tier.descriptionBlock.toLowerCase().includes('free')) {
+        return `<div class="joy-tier-card-points">FREE TO JOIN</div>`;
+      }
+      
+      return `<div class="joy-tier-card-points">MEMBER</div>`;
+    }
+
+    renderTierIcon(tier) {
+      console.log("Render tier icon", tier);
+      // Default tier icons based on common names
+      const iconMap = {
+        'bronze': '○',
+        'silver': '◐◑',
+        'gold': '◉◎◉',
+        'platinum': '✦',
+        'diamond': '◈'
+      };
+
+      const tierNameLower = tier.name.toLowerCase();
+      let fallbackIcon = '○'; // Default icon
+
+      // Try to match tier name to icon
+      Object.keys(iconMap).forEach(key => {
+        if (tierNameLower.includes(key)) {
+          fallbackIcon = iconMap[key];
+        }
+      });
+
+      console.log('Tier icon data:', tier.name, 'imageBlock:', tier.imageBlock, 'iconCustom:', tier.iconCustom);
+
+      // Priority 1: If tier has imageBlock from API, use it
+      if (tier.imageBlock && tier.imageBlock.trim() !== '') {
+        return `<img src="${tier.imageBlock}" alt="${tier.name}" onerror="console.log('Failed to load imageBlock:', '${tier.imageBlock}'); this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div class="joy-tier-card-icon-fallback" style="display:none;">${fallbackIcon}</div>`;
+      }
+
+      // Priority 2: If tier has a custom icon, try to use it
+      if (tier.iconCustom && tier.iconCustom.trim() !== '') {
+        return `<img src="${tier.iconCustom}" alt="${tier.name}" onerror="console.log('Failed to load iconCustom:', '${tier.iconCustom}'); this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div class="joy-tier-card-icon-fallback" style="display:none;">${fallbackIcon}</div>`;
+      }
+
+      // Priority 3: Use fallback symbol
+      return `<div class="joy-tier-card-icon-fallback">${fallbackIcon}</div>`;
+    }
+
+    renderTierPerks(tier) {
+      let perksHtml = '';
+      
+      if (tier.contentPerk && Array.isArray(tier.contentPerk)) {
+        tier.contentPerk.forEach(perk => {
+          perksHtml += `
+            <div class="joy-tier-perk">
+              <span class="joy-tier-perk-bullet">•</span>
+              <span class="joy-tier-perk-text">${perk}</span>
+            </div>
+          `;
+        });
+      } else {
+        // Generate default perks based on tier
+        const defaultPerks = this.generateDefaultPerks(tier);
+        defaultPerks.forEach(perk => {
+          perksHtml += `
+            <div class="joy-tier-perk">
+              <span class="joy-tier-perk-bullet">•</span>
+              <span class="joy-tier-perk-text">${perk}</span>
+            </div>
+          `;
+        });
+      }
+      
+      return perksHtml;
+    }
+
+    generateDefaultPerks(tier) {
+      const perks = [];
+      
+      if (tier.position === 1) {
+        perks.push('100 points welcome bonus');
+        perks.push('500 points for signing up');
+        perks.push('20 points per order');
+      } else if (tier.position === 2) {
+        perks.push('100 points new tier bonus');
+        perks.push('100 points on your birthday');
+        perks.push('FREE 125g Coffee');
+        perks.push('30 points per order');
+      } else if (tier.position === 3) {
+        perks.push('100 points new tier bonus');
+        perks.push('150 points on your birthday');
+        perks.push('FREE Mug');
+        perks.push('40 points per order');
+      } else if (tier.position >= 4) {
+        perks.push('100 points new tier bonus');
+        perks.push('200 points on your birthday');
+        perks.push('FREE Coffee Dripper');
+        perks.push('50 points per order');
+      }
+      
+      return perks;
+    }
+
+    showError(message) {
+      this.innerHTML = `
+        <div class="joy-tiers-error">
+          <h3>Unable to Load Tiers</h3>
+          <p>${message}</p>
+        </div>
+      `;
+    }
+  });
+}
+</script>
+
+{% schema %}
+{
+  "name": "Joy: VIP Tiers Cards",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_header",
+      "label": "Show Header",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "LOYALTY LOOKS GOOD ON YOU"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Premium Perks await with Redber Reward Tiers"
+    },
+    {
+      "type": "header",
+      "content": "Main Button"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_main_button",
+      "label": "Show Main Join Button",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "main_button_text",
+      "label": "Main Button Text",
+      "default": "JOIN NOW"
+    },
+    {
+      "type": "url",
+      "id": "main_button_link",
+      "label": "Main Button Link"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "max_width",
+      "label": "Maximum Width",
+      "options": [
+        {
+          "value": "800px",
+          "label": "800px"
+        },
+        {
+          "value": "1000px",
+          "label": "1000px"
+        },
+        {
+          "value": "1200px",
+          "label": "1200px"
+        },
+        {
+          "value": "1400px",
+          "label": "1400px"
+        },
+        {
+          "value": "100%",
+          "label": "100% (Full Width)"
+        }
+      ],
+      "default": "1200px"
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "min": 40,
+      "max": 120,
+      "step": 10,
+      "unit": "px",
+      "label": "Section Padding",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "section_padding_mobile",
+      "min": 20,
+      "max": 80,
+      "step": 10,
+      "unit": "px",
+      "label": "Section Padding Mobile",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "header_margin_bottom",
+      "min": 20,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Header Bottom Margin",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "button_margin_top",
+      "min": 20,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Button Top Margin",
+      "default": 48
+    },
+    {
+      "type": "header",
+      "content": "Card Layout"
+    },
+    {
+      "type": "range",
+      "id": "card_min_width",
+      "min": 200,
+      "max": 350,
+      "step": 10,
+      "unit": "px",
+      "label": "Card Minimum Width",
+      "default": 250
+    },
+    {
+      "type": "range",
+      "id": "card_gap",
+      "min": 16,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "label": "Card Gap",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "card_gap_mobile",
+      "min": 12,
+      "max": 32,
+      "step": 4,
+      "unit": "px",
+      "label": "Card Gap Mobile",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "card_border_radius",
+      "min": 0,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Card Border Radius",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "card_padding",
+      "min": 20,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "label": "Card Padding",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "card_padding_x",
+      "min": 16,
+      "max": 36,
+      "step": 4,
+      "unit": "px",
+      "label": "Card Horizontal Padding",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "card_padding_mobile",
+      "min": 16,
+      "max": 32,
+      "step": 4,
+      "unit": "px",
+      "label": "Card Padding Mobile",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "card_padding_x_mobile",
+      "min": 12,
+      "max": 28,
+      "step": 4,
+      "unit": "px",
+      "label": "Card Horizontal Padding Mobile",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "card_min_height",
+      "min": 300,
+      "max": 500,
+      "step": 20,
+      "unit": "px",
+      "label": "Card Minimum Height",
+      "default": 400
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "min": 28,
+      "max": 56,
+      "step": 2,
+      "unit": "px",
+      "label": "Title Size",
+      "default": 42
+    },
+    {
+      "type": "range",
+      "id": "title_size_mobile",
+      "min": 20,
+      "max": 36,
+      "step": 2,
+      "unit": "px",
+      "label": "Title Size Mobile",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size",
+      "min": 16,
+      "max": 28,
+      "step": 1,
+      "unit": "px",
+      "label": "Subtitle Size",
+      "default": 22
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size_mobile",
+      "min": 14,
+      "max": 22,
+      "step": 1,
+      "unit": "px",
+      "label": "Subtitle Size Mobile",
+      "default": 18
+    },
+    {
+      "type": "range",
+      "id": "card_title_size",
+      "min": 16,
+      "max": 28,
+      "step": 1,
+      "unit": "px",
+      "label": "Card Title Size",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "perk_text_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Perk Text Size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "points_text_size",
+      "min": 10,
+      "max": 16,
+      "step": 1,
+      "unit": "px",
+      "label": "Points Badge Size",
+      "default": 12
+    },
+    {
+      "type": "header",
+      "content": "Icon Settings"
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "min": 60,
+      "max": 200,
+      "step": 10,
+      "unit": "px",
+      "label": "Icon Container Size",
+      "default": 120
+    },
+    {
+      "type": "range",
+      "id": "icon_image_size",
+      "min": 24,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Icon Image Size",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "icon_fallback_size",
+      "min": 20,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "label": "Icon Fallback Size",
+      "default": 48
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Section Background",
+      "default": "#1A1A1A"
+    },
+    {
+      "type": "image_picker",
+      "id": "background_image",
+      "label": "Background Image"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Title Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "subtitle_color",
+      "label": "Subtitle Color",
+      "default": "#FF6B35"
+    },
+    {
+      "type": "color",
+      "id": "card_background",
+      "label": "Card Background (fallback)",
+      "default": "#FF6B35"
+    },
+    {
+      "type": "color",
+      "id": "card_title_color",
+      "label": "Card Title Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "perk_text_color",
+      "label": "Perk Text Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "perk_bullet_color",
+      "label": "Perk Bullet Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "points_text_color",
+      "label": "Points Badge Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "Icon Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "current_tier_border_color",
+      "label": "Current Tier Border Color",
+      "default": "#FFD700"
+    },
+    {
+      "type": "color",
+      "id": "loading_color",
+      "label": "Loading Text Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "error_color",
+      "label": "Error Text Color",
+      "default": "#FCA5A5"
+    },
+    {
+      "type": "header",
+      "content": "Tier Colors"
+    },
+    {
+      "type": "color",
+      "id": "tier_1_color",
+      "label": "Tier 1 Color",
+      "default": "#FF6B35"
+    },
+    {
+      "type": "color",
+      "id": "tier_2_color",
+      "label": "Tier 2 Color",
+      "default": "#FF8C42"
+    },
+    {
+      "type": "color",
+      "id": "tier_3_color",
+      "label": "Tier 3 Color",
+      "default": "#D2691E"
+    },
+    {
+      "type": "color",
+      "id": "tier_4_color",
+      "label": "Tier 4 Color",
+      "default": "#8B4513"
+    },
+    {
+      "type": "color",
+      "id": "tier_5_color",
+      "label": "Tier 5 Color",
+      "default": "#5D2D0C"
+    },
+    {
+      "type": "header",
+      "content": "Button Styling"
+    },
+    {
+      "type": "color",
+      "id": "main_button_background",
+      "label": "Main Button Background",
+      "default": "#FF6B35"
+    },
+    {
+      "type": "color",
+      "id": "main_button_color",
+      "label": "Main Button Text Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "range",
+      "id": "main_button_border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Main Button Border Radius",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "main_button_text_size",
+      "min": 14,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Main Button Text Size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "join_button_border_radius",
+      "min": 0,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Individual Join Button Border Radius",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "join_button_text_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Individual Join Button Text Size",
+      "default": 16
+    },
+    {
+      "type": "color",
+      "id": "join_button_background",
+      "label": "Individual Join Button Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "join_button_color",
+      "label": "Individual Join Button Text Color",
+      "default": "#FF6B35"
+    },
+    {
+      "type": "color",
+      "id": "join_button_hover_background",
+      "label": "Individual Join Button Hover Background",
+      "default": "#F0F0F0"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Joy VIP Tiers Cards"
+    }
+  ]
+}
+{% endschema %}

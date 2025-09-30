@@ -1,0 +1,950 @@
+{%- style -%}
+  .section-{{ section.id }}-padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+    background-color: {{ section.settings.section_background_color | default: "transparent" }};
+  }
+
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+  }
+
+  .section-{{ section.id }} {
+    --button-primary-bg: {{ section.settings.button_primary_bg | default: "#121212" }};
+    --button-primary-text: {{ section.settings.button_primary_text | default: "#ffffff" }};
+    --button-secondary-border: {{ section.settings.button_secondary_border | default: "#121212" }};
+    --button-secondary-text: {{ section.settings.button_secondary_text | default: "#121212" }};
+  }
+
+
+  .image-with-text {
+    display: flex;
+    align-items: center;
+  }
+
+  .section-{{ section.id }}.image-with-text.page-width {
+    max-width: {{ section.settings.desktop_max_width | default: 1200 }}px !important;
+    margin: 0 auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .image-with-text__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  @media screen and (min-width: 750px) {
+    .image-with-text__grid.grid--2-col-tablet {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .image-with-text__grid.grid--3-col-tablet {
+      grid-template-columns: 1fr 2fr;
+    }
+
+    .image-with-text__grid.grid--layout-6-6 {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .image-with-text__grid.grid--layout-5-7 {
+      grid-template-columns: 5fr 7fr;
+    }
+
+    .image-with-text__grid.grid--layout-7-5 {
+      grid-template-columns: 7fr 5fr;
+    }
+
+    .image-with-text__grid.grid--layout-4-8 {
+      grid-template-columns: 4fr 8fr;
+    }
+
+    .image-with-text__grid.grid--layout-8-4 {
+      grid-template-columns: 8fr 4fr;
+    }
+
+    .image-with-text__grid.grid--layout-3-9 {
+      grid-template-columns: 3fr 9fr;
+    }
+
+    .image-with-text__grid.grid--layout-9-3 {
+      grid-template-columns: 9fr 3fr;
+    }
+
+    .image-with-text__grid.image-with-text__grid--reverse {
+      direction: rtl;
+    }
+
+    .image-with-text__grid.image-with-text__grid--reverse > * {
+      direction: ltr;
+    }
+  }
+
+  .image-with-text__media {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(var(--color-foreground), 0.04);
+  }
+
+  .image-with-text__media.media {
+    display: block;
+  }
+
+  .image-with-text__media--adapt {
+    height: auto;
+  }
+
+  .image-with-text__media--small {
+    height: 300px;
+  }
+
+  .image-with-text__media--medium {
+    height: 450px;
+  }
+
+  .image-with-text__media--large {
+    height: 600px;
+  }
+
+  .image-with-text__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .image-with-text__content {
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 400px;
+  }
+
+  @media screen and (min-width: 750px) {
+    .image-with-text__content {
+      min-height: 500px;
+    }
+  }
+
+  .image-with-text__content--top {
+    justify-content: flex-start !important;
+  }
+
+  .image-with-text__content--middle {
+    justify-content: center !important;
+  }
+
+  .image-with-text__content--bottom {
+    justify-content: flex-end !important;
+  }
+
+  .image-with-text__content--desktop-left {
+    align-items: flex-start;
+  }
+
+  .image-with-text__content--desktop-center {
+    align-items: center;
+    text-align: center;
+  }
+
+  .image-with-text__content--desktop-right {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  @media screen and (max-width: 749px) {
+    .image-with-text__content--mobile-left {
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .image-with-text__content--mobile-center {
+      align-items: center;
+      text-align: center;
+    }
+
+    .image-with-text__content--mobile-right {
+      align-items: flex-end;
+      text-align: right;
+    }
+  }
+
+  .image-with-text__heading {
+    margin: 0 0 1rem;
+  }
+
+  .image-with-text__heading.h0 {
+    font-size: 3rem;
+    line-height: 1.1;
+  }
+
+  .image-with-text__heading.h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+  }
+
+  .image-with-text__heading.h2 {
+    font-size: 2rem;
+    line-height: 1.3;
+  }
+
+  .image-with-text__text {
+    margin: 0 0 1rem;
+  }
+
+  .image-with-text__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .image-with-text__button {
+    flex: 0 1 auto;
+    min-width: 120px;
+  }
+
+  .button {
+    display: inline-block;
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    text-align: center;
+  }
+
+  .section-{{ section.id }} .button--primary {
+    background-color: var(--button-primary-bg) !important;
+    color: var(--button-primary-text) !important;
+    border-color: var(--button-primary-bg) !important;
+  }
+
+  .section-{{ section.id }} .button--primary:not([aria-disabled="true"]):hover {
+    opacity: 0.85;
+  }
+
+  .section-{{ section.id }} .button--secondary {
+    background-color: transparent !important;
+    color: var(--button-secondary-text) !important;
+    border: 2px solid var(--button-secondary-border) !important;
+  }
+
+  .section-{{ section.id }} .button--secondary:not([aria-disabled="true"]):hover {
+    opacity: 0.85;
+  }
+
+  .button[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .placeholder-svg {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(var(--color-foreground), 0.04);
+  }
+
+  @media screen and (max-width: 749px) {
+    .image-with-text__buttons {
+
+      gap: 10px;
+    }
+
+    .image-with-text__button {
+      width: 100%;
+      text-align: center;
+    }
+
+    .button {
+      width: 100%;
+    }
+  }
+{%- endstyle -%}
+
+<div class="section-{{ section.id }}-padding">
+  <div class="section-{{ section.id }} image-with-text image-with-text--{{ section.settings.content_layout }} page-width isolate{% if settings.text_boxes_border_thickness > 0 and settings.text_boxes_border_opacity > 0 and settings.media_border_thickness > 0 and settings.media_border_opacity > 0 %} collapse-borders{% endif %}{% unless section.settings.color_scheme == 'background-1' and settings.media_border_thickness > 0 and settings.text_boxes_shadow_opacity == 0 and settings.text_boxes_border_thickness == 0 or settings.text_boxes_border_opacity == 0 %} collapse-corners{% endunless %}">
+  <div class="image-with-text__grid grid grid--gapless grid--1-col grid--layout-{{ section.settings.column_layout | default: '6-6' }}{% if section.settings.layout == 'text_first' %} image-with-text__grid--reverse{% endif %}">
+    <div class="image-with-text__media-item image-with-text__media-item--{{ section.settings.desktop_image_width }} image-with-text__media-item--{{ section.settings.desktop_content_position }} grid__item">
+      <div
+        class="image-with-text__media image-with-text__media--{{ section.settings.height }} gradient color-{{ section.settings.color_scheme }} global-media-settings {% if section.settings.image != blank %}media{% else %}image-with-text__media--placeholder placeholder{% endif %}{% if section.settings.image_behavior != 'none' %} animate--{{ section.settings.image_behavior }}{% endif %}"
+        {% if section.settings.height == 'adapt' and section.settings.image != blank %}
+          style="padding-bottom: {{ 1 | divided_by: section.settings.image.aspect_ratio | times: 100 }}%;"
+        {% endif %}
+      >
+        {%- if section.settings.image != blank -%}
+          {%- if section.settings.image_behavior == 'ambient' -%}
+            {%- assign widths = '198, 432, 642, 900, 1284, 1800' -%}
+            {%- capture sizes -%}
+              (min-width: {{ settings.page_width }}px) {{ settings.page_width | minus: 100 | divided_by: 1.6667 }}px,
+              (min-width: 750px) calc((100vw - 130px) / 1.667), calc((100vw - 50px) / 1.667)
+            {%- endcapture -%}
+          {%- else -%}
+            {%- assign widths = '165, 360, 535, 750, 1070, 1500' -%}
+            {%- capture sizes -%}
+              (min-width: {{ settings.page_width }}px) {{ settings.page_width | minus: 100 | divided_by: 2 }}px,
+              (min-width: 750px) calc((100vw - 130px) / 2), calc((100vw - 50px) / 2)
+            {%- endcapture -%}
+          {%- endif -%}
+          {{
+            section.settings.image
+            | image_url: width: 1500
+            | image_tag: loading: 'lazy', sizes: sizes, widths: widths
+          }}
+        {%- else -%}
+          {{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}
+        {%- endif -%}
+      </div>
+    </div>
+    <div class="image-with-text__text-item grid__item">
+      <div
+        id="ImageWithText--{{ section.id }}"
+        class="image-with-text__content image-with-text__content--{{ section.settings.desktop_content_position }} image-with-text__content--desktop-{{ section.settings.desktop_content_alignment }} image-with-text__content--mobile-{{ section.settings.mobile_content_alignment }} image-with-text__content--{{ section.settings.height }} gradient color-{{ section.settings.color_scheme }} content-container"
+      >
+        {%- for block in section.blocks -%}
+          {% case block.type %}
+            {%- when 'heading' -%}
+              {%- if customer and block.settings.show_customer_greeting -%}
+                <div
+                  class="image-with-text__heading rte {{ block.settings.heading_size }}"
+                  {{ block.shopify_attributes }}
+                >
+                  Hi {{ customer.first_name | default: customer.name | default: 'there' }}, you have
+                  {%- if customer.metafields.avada_joy.point -%}
+                    {{ ' ' }}{%- assign aj_point = customer.metafields.avada_joy.point | split: '' -%}
+                    {%- for digit in aj_point -%}
+                      {%- assign threeFromEnd = aj_point.size | minus: forloop.index | modulo: 3 -%}
+                      {%- if threeFromEnd == 2 and forloop.index != 1 -%}{{ digit | prepend: ',' }}{%- else -%}{{ digit }}{%- endif -%}
+                    {% endfor %}
+                    {{ ' ' }}{{ aj_point | pluralize: 'point', 'points' }}
+                  {%- else -%}
+                    {{ ' ' }}0 points
+                  {%- endif -%}
+                  {%- if customer.metafields.avada_joy.vipTier.tierName -%}
+                    {{ ' ' }}and {{ customer.metafields.avada_joy.vipTier.tierName }} tier
+                  {%- endif -%}
+                </div>
+              {%- else -%}
+                <div
+                  class="image-with-text__heading rte {{ block.settings.heading_size }}"
+                  {{ block.shopify_attributes }}
+                >
+                  {{ block.settings.heading }}
+                </div>
+              {%- endif -%}
+            {%- when 'caption' -%}
+              <p
+                class="image-with-text__text image-with-text__text--caption {{ block.settings.text_style }} {{ block.settings.text_style }}--{{ block.settings.text_size }} {{ block.settings.text_style }}"
+                {{ block.shopify_attributes }}
+              >
+                {%- if customer and block.settings.show_customer_subtitle -%}
+                  {{ block.settings.customer_subtitle | escape }}
+                {%- else -%}
+                  {{ block.settings.caption | escape }}
+                {%- endif -%}
+              </p>
+            {%- when 'text' -%}
+              <div class="image-with-text__text rte {{ block.settings.text_style }}" {{ block.shopify_attributes }}>
+                {%- if customer and block.settings.show_customer_text -%}
+                  {{ block.settings.customer_text }}
+                {%- else -%}
+                  {{ block.settings.text }}
+                {%- endif -%}
+              </div>
+            {%- when 'buttons' -%}
+              <div class="image-with-text__buttons" {{ block.shopify_attributes }}>
+                {%- if customer and block.settings.show_customer_buttons -%}
+                  {%- comment -%} Buttons for logged-in customers {%- endcomment -%}
+                  {%- if block.settings.customer_button_label != blank -%}
+                    <a
+                      {% if block.settings.customer_button_link == blank %}
+                        role="link" aria-disabled="true"
+                      {% else %}
+                        href="{{ block.settings.customer_button_link }}"
+                      {% endif %}
+                      class="button image-with-text__button{% if block.settings.customer_button_style_secondary %} button--secondary{% else %} button--primary{% endif %}"
+                    >
+                      {{ block.settings.customer_button_label | escape }}
+                    </a>
+                  {%- endif -%}
+                {%- else -%}
+                  {%- comment -%} Regular buttons for guests/default {%- endcomment -%}
+                  {%- if block.settings.button_label_1 != blank -%}
+                    <a
+                      {% if block.settings.button_link_1 == blank %}
+                        role="link" aria-disabled="true"
+                      {% else %}
+                        href="{{ block.settings.button_link_1 }}"
+                      {% endif %}
+                      class="button image-with-text__button{% if block.settings.button_style_secondary_1 %} button--secondary{% else %} button--primary{% endif %}"
+                    >
+                      {{ block.settings.button_label_1 | escape }}
+                    </a>
+                  {%- endif -%}
+                  {%- if block.settings.button_label_2 != blank -%}
+                    <a
+                      {% if block.settings.button_link_2 == blank %}
+                        role="link" aria-disabled="true"
+                      {% else %}
+                        href="{{ block.settings.button_link_2 }}"
+                      {% endif %}
+                      class="button image-with-text__button{% if block.settings.button_style_secondary_2 %} button--secondary{% else %} button--primary{% endif %}"
+                    >
+                      {{ block.settings.button_label_2 | escape }}
+                    </a>
+                  {%- endif -%}
+                {%- endif -%}
+              </div>
+          {%- endcase -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Image with text + buttons",
+  "class": "section",
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image"
+    },
+    {
+      "type": "select",
+      "id": "height",
+      "options": [
+        {
+          "value": "adapt",
+          "label": "Adapt to image"
+        },
+        {
+          "value": "small",
+          "label": "Small"
+        },
+        {
+          "value": "medium",
+          "label": "Medium"
+        },
+        {
+          "value": "large",
+          "label": "Large"
+        }
+      ],
+      "default": "adapt",
+      "label": "Image height"
+    },
+    {
+      "type": "select",
+      "id": "column_layout",
+      "options": [
+        {
+          "value": "6-6",
+          "label": "50% / 50% (Equal)"
+        },
+        {
+          "value": "5-7",
+          "label": "42% / 58%"
+        },
+        {
+          "value": "7-5",
+          "label": "58% / 42%"
+        },
+        {
+          "value": "4-8",
+          "label": "33% / 67%"
+        },
+        {
+          "value": "8-4",
+          "label": "67% / 33%"
+        },
+        {
+          "value": "3-9",
+          "label": "25% / 75%"
+        },
+        {
+          "value": "9-3",
+          "label": "75% / 25%"
+        }
+      ],
+      "default": "6-6",
+      "label": "Column layout (Image / Text)",
+      "info": "Choose the width ratio between image and text columns on desktop"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "options": [
+        {
+          "value": "image_first",
+          "label": "Image first"
+        },
+        {
+          "value": "text_first",
+          "label": "Image second"
+        }
+      ],
+      "default": "image_first",
+      "label": "Desktop image placement",
+      "info": "Image first is the default mobile layout."
+    },
+    {
+      "type": "select",
+      "id": "desktop_content_position",
+      "options": [
+        {
+          "value": "top",
+          "label": "Top"
+        },
+        {
+          "value": "middle",
+          "label": "Middle"
+        },
+        {
+          "value": "bottom",
+          "label": "Bottom"
+        }
+      ],
+      "default": "top",
+      "label": "Desktop content position"
+    },
+    {
+      "type": "select",
+      "id": "desktop_content_alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "left",
+      "label": "Desktop content alignment"
+    },
+    {
+      "type": "select",
+      "id": "content_layout",
+      "options": [
+        {
+          "value": "no-overlap",
+          "label": "No overlap"
+        },
+        {
+          "value": "overlap",
+          "label": "Overlap"
+        }
+      ],
+      "default": "no-overlap",
+      "label": "Content layout"
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "options": [
+        {
+          "value": "accent-1",
+          "label": "Accent 1"
+        },
+        {
+          "value": "accent-2",
+          "label": "Accent 2"
+        },
+        {
+          "value": "background-1",
+          "label": "Background 1"
+        },
+        {
+          "value": "background-2",
+          "label": "Background 2"
+        },
+        {
+          "value": "inverse",
+          "label": "Inverse"
+        }
+      ],
+      "default": "background-1",
+      "label": "Color scheme"
+    },
+    {
+      "type": "color",
+      "id": "section_background_color",
+      "label": "Section background color",
+      "info": "Leave empty for transparent background"
+    },
+    {
+      "type": "header",
+      "content": "Button Colors"
+    },
+    {
+      "type": "color",
+      "id": "button_primary_bg",
+      "label": "Primary button background",
+      "default": "#121212"
+    },
+    {
+      "type": "color",
+      "id": "button_primary_text",
+      "label": "Primary button text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_secondary_border",
+      "label": "Secondary button border",
+      "default": "#121212"
+    },
+    {
+      "type": "color",
+      "id": "button_secondary_text",
+      "label": "Secondary button text",
+      "default": "#121212"
+    },
+    {
+      "type": "header",
+      "content": "Animation"
+    },
+    {
+      "type": "select",
+      "id": "image_behavior",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "ambient",
+          "label": "Ambient movement"
+        }
+      ],
+      "default": "none",
+      "label": "Image behavior"
+    },
+    {
+      "type": "header",
+      "content": "Mobile layout"
+    },
+    {
+      "type": "select",
+      "id": "mobile_content_alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "left",
+      "label": "Mobile content alignment"
+    },
+    {
+      "type": "header",
+      "content": "Layout Settings"
+    },
+    {
+      "type": "range",
+      "id": "desktop_max_width",
+      "min": 800,
+      "max": 1600,
+      "step": 100,
+      "unit": "px",
+      "label": "Desktop max width",
+      "default": 1200,
+      "info": "Maximum width of the section content on desktop"
+    },
+    {
+      "type": "header",
+      "content": "Section padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding top",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding bottom",
+      "default": 36
+    }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "name": "Heading",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "richtext",
+          "id": "heading",
+          "default": "<p>Image with text</p>",
+          "label": "Heading"
+        },
+        {
+          "type": "select",
+          "id": "heading_size",
+          "options": [
+            {
+              "value": "h2",
+              "label": "Small"
+            },
+            {
+              "value": "h1",
+              "label": "Medium"
+            },
+            {
+              "value": "h0",
+              "label": "Large"
+            }
+          ],
+          "default": "h1",
+          "label": "Heading size"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_customer_greeting",
+          "default": false,
+          "label": "Show personalized greeting for logged-in customers",
+          "info": "When enabled, shows customer name, points, and tier instead of the heading text for logged-in customers"
+        }
+      ]
+    },
+    {
+      "type": "caption",
+      "name": "Caption",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "caption",
+          "default": "Add a tagline",
+          "label": "Text"
+        },
+        {
+          "type": "select",
+          "id": "text_style",
+          "options": [
+            {
+              "value": "subtitle",
+              "label": "Subtitle"
+            },
+            {
+              "value": "caption-with-letter-spacing",
+              "label": "Caption with letter spacing"
+            }
+          ],
+          "default": "caption-with-letter-spacing",
+          "label": "Text style"
+        },
+        {
+          "type": "select",
+          "id": "text_size",
+          "options": [
+            {
+              "value": "small",
+              "label": "Small"
+            },
+            {
+              "value": "medium",
+              "label": "Medium"
+            },
+            {
+              "value": "large",
+              "label": "Large"
+            }
+          ],
+          "default": "medium",
+          "label": "Text size"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_customer_subtitle",
+          "default": false,
+          "label": "Show different subtitle for logged-in customers"
+        },
+        {
+          "type": "text",
+          "id": "customer_subtitle",
+          "default": "Welcome back! Continue earning points and unlocking exclusive rewards with every purchase.",
+          "label": "Customer subtitle",
+          "info": "This text will be shown to logged-in customers when the option above is enabled"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "Text",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "richtext",
+          "id": "text",
+          "default": "<p>Pair text with an image to focus on your chosen product, collection, or blog post. Add details on availability, style, or even provide a review.</p>",
+          "label": "Description"
+        },
+        {
+          "type": "select",
+          "id": "text_style",
+          "options": [
+            {
+              "value": "body",
+              "label": "Body"
+            },
+            {
+              "value": "subtitle",
+              "label": "Subtitle"
+            }
+          ],
+          "default": "body",
+          "label": "Text style"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_customer_text",
+          "default": false,
+          "label": "Show different text for logged-in customers"
+        },
+        {
+          "type": "richtext",
+          "id": "customer_text",
+          "default": "<p>Join and receive rewards with every purchase</p>",
+          "label": "Customer text",
+          "info": "This text will be shown to logged-in customers when the option above is enabled"
+        }
+      ]
+    },
+    {
+      "type": "buttons",
+      "name": "Buttons",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "header",
+          "content": "Button 1"
+        },
+        {
+          "type": "text",
+          "id": "button_label_1",
+          "default": "Button label",
+          "label": "Button 1 label",
+          "info": "Leave blank to hide this button"
+        },
+        {
+          "type": "url",
+          "id": "button_link_1",
+          "label": "Button 1 link"
+        },
+        {
+          "type": "checkbox",
+          "id": "button_style_secondary_1",
+          "default": false,
+          "label": "Use outline button style for Button 1"
+        },
+        {
+          "type": "header",
+          "content": "Button 2"
+        },
+        {
+          "type": "text",
+          "id": "button_label_2",
+          "default": "Button label",
+          "label": "Button 2 label",
+          "info": "Leave blank to hide this button"
+        },
+        {
+          "type": "url",
+          "id": "button_link_2",
+          "label": "Button 2 link"
+        },
+        {
+          "type": "checkbox",
+          "id": "button_style_secondary_2",
+          "default": true,
+          "label": "Use outline button style for Button 2"
+        },
+        {
+          "type": "header",
+          "content": "Customer Button (Logged-in users)"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_customer_buttons",
+          "default": false,
+          "label": "Show different button for logged-in customers",
+          "info": "When enabled, logged-in customers will see a single custom button instead of the regular buttons"
+        },
+        {
+          "type": "text",
+          "id": "customer_button_label",
+          "default": "Shop product",
+          "label": "Customer button label",
+          "info": "Button text shown to logged-in customers"
+        },
+        {
+          "type": "url",
+          "id": "customer_button_link",
+          "label": "Customer button link"
+        },
+        {
+          "type": "checkbox",
+          "id": "customer_button_style_secondary",
+          "default": false,
+          "label": "Use outline button style for customer button"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Image with text + buttons",
+      "blocks": [
+        {
+          "type": "heading"
+        },
+        {
+          "type": "text"
+        },
+        {
+          "type": "buttons"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

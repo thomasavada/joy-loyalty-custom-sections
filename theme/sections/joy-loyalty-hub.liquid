@@ -1,0 +1,827 @@
+{% comment %}
+  Joy Loyalty Hub Section
+  Modern, flexible section combining earning and redeeming programs
+  Uses modular components for maximum design flexibility
+{% endcomment %}
+
+{{ 'joy-loyalty-hub.css' | asset_url | stylesheet_tag }}
+
+<div class="joy-loyalty-hub" data-section-id="{{ section.id }}">
+  <div class="joy-loyalty-hub__container">
+
+    {% if section.settings.show_header %}
+      <header class="joy-loyalty-hub__header">
+        <div class="joy-loyalty-hub__header-content">
+          <h2 class="joy-loyalty-hub__title">
+            {{ section.settings.title | default: 'Loyalty Program' }}
+          </h2>
+          {% if section.settings.subtitle %}
+            <p class="joy-loyalty-hub__subtitle">
+              {{ section.settings.subtitle }}
+            </p>
+          {% endif %}
+        </div>
+
+        {% if section.settings.show_customer_info %}
+          <div class="joy-loyalty-hub__customer-info">
+            <joy-customer-points
+              data-customer-id="{{ customer.id | default: '' }}"
+              data-show-level="{{ section.settings.show_customer_level }}"
+              data-show-progress="{{ section.settings.show_level_progress }}"
+            ></joy-customer-points>
+          </div>
+        {% endif %}
+      </header>
+    {% endif %}
+
+    <div class="joy-loyalty-hub__content joy-loyalty-hub__content--{{ section.settings.layout_style }}">
+
+      {% if section.settings.show_earning_section %}
+        <section class="joy-loyalty-hub__section joy-loyalty-hub__earning">
+          {% if section.settings.earning_section_title %}
+            <h3 class="joy-loyalty-hub__section-title">
+              {{ section.settings.earning_section_title }}
+            </h3>
+          {% endif %}
+
+          {% if section.settings.earning_section_description %}
+            <p class="joy-loyalty-hub__section-description">
+              {{ section.settings.earning_section_description }}
+            </p>
+          {% endif %}
+
+          <joy-earning-programs
+            data-section-id="{{ section.id }}-earning"
+            data-customer-id="{{ customer.id | default: '' }}"
+            data-layout="{{ section.settings.earning_layout }}"
+            data-max-programs="{{ section.settings.max_earning_programs }}"
+            data-show-completed="{{ section.settings.show_completed_earning }}"
+            data-filter-types="{{ section.settings.earning_program_types }}"
+            class="joy-loyalty-hub__programs"
+          ></joy-earning-programs>
+        </section>
+      {% endif %}
+
+      {% if section.settings.show_redeeming_section %}
+        <section class="joy-loyalty-hub__section joy-loyalty-hub__redeeming">
+          {% if section.settings.redeeming_section_title %}
+            <h3 class="joy-loyalty-hub__section-title">
+              {{ section.settings.redeeming_section_title }}
+            </h3>
+          {% endif %}
+
+          {% if section.settings.redeeming_section_description %}
+            <p class="joy-loyalty-hub__section-description">
+              {{ section.settings.redeeming_section_description }}
+            </p>
+          {% endif %}
+
+          <joy-redeeming-programs
+            data-section-id="{{ section.id }}-redeeming"
+            data-customer-id="{{ customer.id | default: '' }}"
+            data-layout="{{ section.settings.redeeming_layout }}"
+            data-max-programs="{{ section.settings.max_redeeming_programs }}"
+            data-show-disabled="{{ section.settings.show_disabled_redeeming }}"
+            data-modal-size="{{ section.settings.modal_size }}"
+            data-modal-cancel-text="{{ section.settings.modal_cancel_text }}"
+            data-modal-redeem-text="{{ section.settings.modal_redeem_text }}"
+            data-processing-text="{{ section.settings.processing_text }}"
+            data-success-text="{{ section.settings.success_text }}"
+            class="joy-loyalty-hub__programs"
+          ></joy-redeeming-programs>
+        </section>
+      {% endif %}
+
+    </div>
+
+    {% if section.settings.show_footer %}
+      <footer class="joy-loyalty-hub__footer">
+        {% if section.settings.footer_text %}
+          <p class="joy-loyalty-hub__footer-text">
+            {{ section.settings.footer_text }}
+          </p>
+        {% endif %}
+
+        {% if section.settings.show_terms_link and section.settings.terms_url %}
+          <a href="{{ section.settings.terms_url }}" class="joy-loyalty-hub__terms-link">
+            {{ section.settings.terms_link_text | default: 'Terms & Conditions' }}
+          </a>
+        {% endif %}
+      </footer>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Include required components -->
+{% render 'joy-earning-programs' %}
+{% render 'joy-redeeming-programs' %}
+
+<script>
+// Customer Points Component
+class JoyCustomerPoints extends window.JoyComponents.BaseComponent {
+  static COMPONENT_NAME = 'joy-customer-points';
+
+  constructor() {
+    super();
+    this.showLevel = this.dataset.showLevel === 'true';
+    this.showProgress = this.dataset.showProgress === 'true';
+  }
+
+  async onJoyReady(joyInstance) {
+    try {
+      const customerData = await this.loadCustomerData(joyInstance);
+
+      if (!customerData && !this.customerId) {
+        this.renderGuestState();
+        return;
+      }
+
+      this.renderCustomerInfo(customerData);
+    } catch (error) {
+      this.error('Failed to load customer points', error);
+      this.renderEmptyState('Unable to load customer information');
+    }
+  }
+
+  renderGuestState() {
+    this.innerHTML = `
+      <div class="joy-customer-points joy-customer-points--guest">
+        <div class="joy-customer-points__content">
+          <p class="joy-customer-points__message">
+            <a href="/account/login" class="joy-customer-points__login-link">
+              Sign in to view your rewards
+            </a>
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  renderCustomerInfo(customerData) {
+    const points = this.getCustomerPoints();
+    const level = customerData?.level || null;
+    const progress = customerData?.levelProgress || null;
+
+    this.innerHTML = `
+      <div class="joy-customer-points joy-customer-points--customer">
+        <div class="joy-customer-points__content">
+          <div class="joy-customer-points__points">
+            <span class="joy-customer-points__points-value">${points}</span>
+            <span class="joy-customer-points__points-label">${this.formatPointText(points)}</span>
+          </div>
+
+          ${this.showLevel && level ? `
+            <div class="joy-customer-points__level">
+              <span class="joy-customer-points__level-label">${level.name || 'Member'}</span>
+              ${this.showProgress && progress ? `
+                <div class="joy-customer-points__progress">
+                  <div class="joy-customer-points__progress-bar">
+                    <div class="joy-customer-points__progress-fill" style="width: ${progress.percentage || 0}%"></div>
+                  </div>
+                  <span class="joy-customer-points__progress-text">
+                    ${progress.current || 0}/${progress.target || 0} to next level
+                  </span>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+}
+
+// Register customer points component
+if (!customElements.get(JoyCustomerPoints.COMPONENT_NAME)) {
+  customElements.define(JoyCustomerPoints.COMPONENT_NAME, JoyCustomerPoints);
+}
+</script>
+
+<style>
+  .joy-loyalty-hub {
+    --joy-hub-bg: {{ section.settings.background_color | default: '#FFFFFF' }};
+    --joy-hub-text: {{ section.settings.text_color | default: '#111827' }};
+    --joy-hub-primary: {{ section.settings.primary_color | default: '#D4A574' }};
+    --joy-hub-secondary: {{ section.settings.secondary_color | default: '#6B7280' }};
+    --joy-hub-border: {{ section.settings.border_color | default: '#E5E7EB' }};
+    --joy-hub-radius: {{ section.settings.border_radius | default: 12 }}px;
+    --joy-hub-spacing: {{ section.settings.section_spacing | default: 24 }}px;
+
+    background: var(--joy-hub-bg);
+    color: var(--joy-hub-text);
+    font-family: inherit;
+  }
+
+  .joy-loyalty-hub__container {
+    max-width: {{ section.settings.max_width | default: 1200 }}px;
+    margin: 0 auto;
+    padding: {{ section.settings.section_padding | default: 60 }}px var(--joy-hub-spacing);
+  }
+
+  /* Header Styles */
+  .joy-loyalty-hub__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: calc(var(--joy-hub-spacing) * 2);
+    gap: var(--joy-hub-spacing);
+  }
+
+  .joy-loyalty-hub__header-content {
+    flex: 1;
+    text-align: {{ section.settings.header_alignment | default: 'left' }};
+  }
+
+  .joy-loyalty-hub__title {
+    font-size: {{ section.settings.title_size | default: 32 }}px;
+    font-weight: 700;
+    color: var(--joy-hub-text);
+    margin: 0 0 var(--joy-spacing-sm) 0;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .joy-loyalty-hub__subtitle {
+    font-size: 16px;
+    color: var(--joy-hub-secondary);
+    margin: 0;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
+  /* Customer Info */
+  .joy-customer-points {
+    flex-shrink: 0;
+  }
+
+  .joy-customer-points__content {
+    background: rgba(212, 165, 116, 0.08);
+    border: 1px solid var(--joy-hub-border);
+    border-radius: var(--joy-hub-radius);
+    padding: var(--joy-hub-spacing);
+    text-align: center;
+    min-width: 200px;
+  }
+
+  .joy-customer-points__points {
+    margin-bottom: var(--joy-spacing-sm);
+  }
+
+  .joy-customer-points__points-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--joy-hub-primary);
+  }
+
+  .joy-customer-points__points-label {
+    font-size: 14px;
+    color: var(--joy-hub-secondary);
+    margin-left: var(--joy-spacing-xs);
+  }
+
+  .joy-customer-points__level-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--joy-hub-text);
+  }
+
+  .joy-customer-points__progress {
+    margin-top: var(--joy-spacing-xs);
+  }
+
+  .joy-customer-points__progress-bar {
+    height: 6px;
+    background: var(--joy-hub-border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: var(--joy-spacing-xs);
+  }
+
+  .joy-customer-points__progress-fill {
+    height: 100%;
+    background: var(--joy-hub-primary);
+    transition: width 0.3s ease;
+  }
+
+  .joy-customer-points__progress-text {
+    font-size: 12px;
+    color: var(--joy-hub-secondary);
+  }
+
+  .joy-customer-points__login-link {
+    color: var(--joy-hub-primary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .joy-customer-points__login-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Content Layout */
+  .joy-loyalty-hub__content {
+    display: grid;
+    gap: calc(var(--joy-hub-spacing) * 2);
+  }
+
+  .joy-loyalty-hub__content--split {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .joy-loyalty-hub__content--stacked {
+    grid-template-columns: 1fr;
+  }
+
+  .joy-loyalty-hub__content--earning-first .joy-loyalty-hub__earning {
+    order: 1;
+  }
+
+  .joy-loyalty-hub__content--earning-first .joy-loyalty-hub__redeeming {
+    order: 2;
+  }
+
+  /* Section Styles */
+  .joy-loyalty-hub__section {
+    background: {{ section.settings.section_background | default: 'transparent' }};
+    border: {{ section.settings.section_border_width | default: 0 }}px solid var(--joy-hub-border);
+    border-radius: var(--joy-hub-radius);
+    padding: {{ section.settings.section_inner_padding | default: 0 }}px;
+  }
+
+  .joy-loyalty-hub__section-title {
+    font-size: {{ section.settings.section_title_size | default: 24 }}px;
+    font-weight: 600;
+    color: var(--joy-hub-text);
+    margin: 0 0 var(--joy-spacing-sm) 0;
+    line-height: 1.3;
+  }
+
+  .joy-loyalty-hub__section-description {
+    font-size: 14px;
+    color: var(--joy-hub-secondary);
+    margin: 0 0 var(--joy-hub-spacing) 0;
+    line-height: 1.5;
+  }
+
+  .joy-loyalty-hub__programs {
+    margin-top: var(--joy-hub-spacing);
+  }
+
+  /* Footer */
+  .joy-loyalty-hub__footer {
+    margin-top: calc(var(--joy-hub-spacing) * 2);
+    padding-top: var(--joy-hub-spacing);
+    border-top: 1px solid var(--joy-hub-border);
+    text-align: center;
+  }
+
+  .joy-loyalty-hub__footer-text {
+    font-size: 14px;
+    color: var(--joy-hub-secondary);
+    margin: 0 0 var(--joy-spacing-sm) 0;
+    line-height: 1.5;
+  }
+
+  .joy-loyalty-hub__terms-link {
+    font-size: 13px;
+    color: var(--joy-hub-primary);
+    text-decoration: none;
+  }
+
+  .joy-loyalty-hub__terms-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .joy-loyalty-hub__header {
+      flex-direction: column;
+      gap: var(--joy-hub-spacing);
+    }
+
+    .joy-loyalty-hub__header-content {
+      text-align: center;
+    }
+
+    .joy-loyalty-hub__content--split {
+      grid-template-columns: 1fr;
+    }
+
+    .joy-loyalty-hub__title {
+      font-size: 28px;
+    }
+
+    .joy-customer-points__content {
+      min-width: auto;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .joy-loyalty-hub__container {
+      padding-left: var(--joy-spacing-md);
+      padding-right: var(--joy-spacing-md);
+    }
+  }
+
+  /* Component Variables Override */
+  .joy-loyalty-hub .joy-component {
+    --joy-primary-color: var(--joy-hub-primary);
+    --joy-text-primary: var(--joy-hub-text);
+    --joy-text-secondary: var(--joy-hub-secondary);
+    --joy-border-color: var(--joy-hub-border);
+    --joy-border-radius: var(--joy-hub-radius);
+    --joy-background: var(--joy-hub-bg);
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Joy: Loyalty Hub",
+  "class": "joy-loyalty-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_header",
+      "label": "Show Header",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Loyalty Program"
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "info": "Optional subtitle text"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_customer_info",
+      "label": "Show Customer Points",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_customer_level",
+      "label": "Show Customer Level",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_level_progress",
+      "label": "Show Level Progress",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "Layout Settings"
+    },
+    {
+      "type": "select",
+      "id": "layout_style",
+      "label": "Layout Style",
+      "options": [
+        {"value": "split", "label": "Side by Side"},
+        {"value": "stacked", "label": "Stacked"},
+        {"value": "earning-first", "label": "Earning Programs First"}
+      ],
+      "default": "split"
+    },
+    {
+      "type": "select",
+      "id": "header_alignment",
+      "label": "Header Alignment",
+      "options": [
+        {"value": "left", "label": "Left"},
+        {"value": "center", "label": "Center"},
+        {"value": "right", "label": "Right"}
+      ],
+      "default": "left"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "min": 800,
+      "max": 1600,
+      "step": 50,
+      "unit": "px",
+      "label": "Maximum Width",
+      "default": 1200
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "min": 20,
+      "max": 120,
+      "step": 10,
+      "unit": "px",
+      "label": "Section Padding",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "section_spacing",
+      "min": 16,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "label": "Element Spacing",
+      "default": 24
+    },
+    {
+      "type": "header",
+      "content": "Earning Programs"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_earning_section",
+      "label": "Show Earning Programs",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "earning_section_title",
+      "label": "Earning Section Title",
+      "default": "Ways to Earn"
+    },
+    {
+      "type": "textarea",
+      "id": "earning_section_description",
+      "label": "Earning Section Description"
+    },
+    {
+      "type": "select",
+      "id": "earning_layout",
+      "label": "Earning Programs Layout",
+      "options": [
+        {"value": "grid", "label": "Grid"},
+        {"value": "list", "label": "List"},
+        {"value": "cards", "label": "Cards"}
+      ],
+      "default": "grid"
+    },
+    {
+      "type": "range",
+      "id": "max_earning_programs",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "label": "Max Earning Programs (0 = no limit)",
+      "default": 0
+    },
+    {
+      "type": "checkbox",
+      "id": "show_completed_earning",
+      "label": "Show Completed Programs",
+      "default": false
+    },
+    {
+      "type": "text",
+      "id": "earning_program_types",
+      "label": "Filter Program Types",
+      "info": "Comma-separated list (signup,birthday,review,etc.). Leave empty for all types."
+    },
+    {
+      "type": "header",
+      "content": "Redeeming Programs"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_redeeming_section",
+      "label": "Show Redeeming Programs",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "redeeming_section_title",
+      "label": "Redeeming Section Title",
+      "default": "Ways to Redeem"
+    },
+    {
+      "type": "textarea",
+      "id": "redeeming_section_description",
+      "label": "Redeeming Section Description"
+    },
+    {
+      "type": "select",
+      "id": "redeeming_layout",
+      "label": "Redeeming Programs Layout",
+      "options": [
+        {"value": "grid", "label": "Grid"},
+        {"value": "list", "label": "List"},
+        {"value": "cards", "label": "Cards"}
+      ],
+      "default": "cards"
+    },
+    {
+      "type": "range",
+      "id": "max_redeeming_programs",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "label": "Max Redeeming Programs (0 = no limit)",
+      "default": 0
+    },
+    {
+      "type": "checkbox",
+      "id": "show_disabled_redeeming",
+      "label": "Show Programs Customer Can't Afford",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Modal Settings"
+    },
+    {
+      "type": "select",
+      "id": "modal_size",
+      "label": "Modal Size",
+      "options": [
+        {"value": "small", "label": "Small"},
+        {"value": "medium", "label": "Medium"},
+        {"value": "large", "label": "Large"}
+      ],
+      "default": "medium"
+    },
+    {
+      "type": "text",
+      "id": "modal_cancel_text",
+      "label": "Modal Cancel Button Text",
+      "default": "Cancel"
+    },
+    {
+      "type": "text",
+      "id": "modal_redeem_text",
+      "label": "Modal Redeem Button Text",
+      "default": "Redeem"
+    },
+    {
+      "type": "text",
+      "id": "processing_text",
+      "label": "Processing Text",
+      "default": "Processing..."
+    },
+    {
+      "type": "text",
+      "id": "success_text",
+      "label": "Success Text",
+      "default": "Success!"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "min": 24,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Title Size",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "section_title_size",
+      "min": 18,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Section Title Size",
+      "default": 24
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#111827"
+    },
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Primary Color",
+      "default": "#D4A574"
+    },
+    {
+      "type": "color",
+      "id": "secondary_color",
+      "label": "Secondary Text Color",
+      "default": "#6B7280"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#E5E7EB"
+    },
+    {
+      "type": "color",
+      "id": "section_background",
+      "label": "Section Background",
+      "default": "transparent"
+    },
+    {
+      "type": "header",
+      "content": "Section Styling"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Border Radius",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "section_border_width",
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "unit": "px",
+      "label": "Section Border Width",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "section_inner_padding",
+      "min": 0,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "label": "Section Inner Padding",
+      "default": 0
+    },
+    {
+      "type": "header",
+      "content": "Footer"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_footer",
+      "label": "Show Footer",
+      "default": false
+    },
+    {
+      "type": "textarea",
+      "id": "footer_text",
+      "label": "Footer Text"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_terms_link",
+      "label": "Show Terms Link",
+      "default": false
+    },
+    {
+      "type": "url",
+      "id": "terms_url",
+      "label": "Terms & Conditions URL"
+    },
+    {
+      "type": "text",
+      "id": "terms_link_text",
+      "label": "Terms Link Text",
+      "default": "Terms & Conditions"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Joy: Loyalty Hub",
+      "settings": {
+        "show_header": true,
+        "title": "Loyalty Program",
+        "show_customer_info": true,
+        "layout_style": "split",
+        "show_earning_section": true,
+        "earning_section_title": "Ways to Earn",
+        "earning_layout": "grid",
+        "show_redeeming_section": true,
+        "redeeming_section_title": "Ways to Redeem",
+        "redeeming_layout": "cards"
+      }
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,2978 @@
+{% comment %}
+  Joy Loyalty - Custom Way to Earn Section
+  This section displays earning programs with robust error handling
+{% endcomment %}
+
+<div class="joy-custom-earn-section" data-section-id="{{ section.id }}">
+  <style>
+      .joy-custom-earn-container {
+          max-width: {{ section.settings.max_width | default: 1200 }}px;
+          margin: 0 auto;
+          padding: {{ section.settings.section_padding | default: 60 }}px 24px;
+          background: {{ section.settings.background_color | default: '#FFFFFF' }};
+      }
+
+      .joy-earn-header {
+          text-align: {{ section.settings.header_alignment | default: 'center' }};
+          margin-bottom: 48px;
+      }
+
+      .joy-earn-title {
+          font-size: {{ section.settings.title_size | default: 28 }}px;
+          color: {{ section.settings.title_color | default: '#1A1A1A' }};
+          margin: 0 0 8px 0;
+          font-weight: 600;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+      }
+
+      .joy-earn-subtitle {
+          font-size: 16px;
+          color: {{ section.settings.subtitle_color | default: '#6B7280' }};
+          margin: 0;
+          line-height: 1.5;
+          font-weight: 400;
+      }
+
+      .joy-earn-content {
+          display: flex;
+          gap: 60px;
+          align-items: flex-start;
+          margin-top: 40px;
+      }
+
+      .joy-banner-image {
+          flex: 0 0 {{ section.settings.banner_width | default: 420 }}px;
+          border-radius: {{ section.settings.banner_border_radius | default: 8 }}px;
+          min-height: {{ section.settings.banner_height | default: 440 }}px;
+          max-height: {{ section.settings.banner_max_height | default: 500 }}px;
+      {% if section.settings.banner_image %} background-image: url('{{ section.settings.banner_image | image_url: width: 600 }}');
+          background-size: {{ section.settings.banner_image_fit | default: 'cover' }};
+          background-position: {{ section.settings.banner_image_position | default: 'center' }};
+          background-repeat: no-repeat;
+          background-attachment: scroll;
+      {% else %} background: linear-gradient({{ section.settings.banner_gradient_direction | default: '135deg' }}, {{ section.settings.banner_gradient_start | default: '#F5F1EB' }} 0%, {{ section.settings.banner_gradient_end | default: '#E8DDD4' }} 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: {{ section.settings.banner_text_color | default: '#666666' }};
+          font-size: {{ section.settings.banner_text_size | default: 16 }}px;
+          text-align: center;
+          padding: {{ section.settings.banner_padding | default: 30 }}px;
+      {% endif %}
+      }
+
+      .joy-programs-grid {
+          flex: 1;
+          display: grid;
+          grid-template-columns: repeat({{ section.settings.columns_desktop | default: 2 }}, 1fr);
+          gap: {{ section.settings.card_gap | default: 12 }}px;
+      }
+
+      .joy-earn-content-no-banner {
+          justify-content: center;
+      }
+
+      .joy-programs-full-width {
+          max-width: 100%;
+          grid-template-columns: repeat({{ section.settings.columns_desktop_no_banner | default: 3 }}, 1fr);
+      }
+
+      .joy-program-card {
+          background: {{ section.settings.card_background | default: '#FFFFFF' }};
+          border: {{ section.settings.card_border_width | default: 1 }}px solid{{ section.settings.card_border_color | default: '#E5E7EB' }};
+          border-radius: {{ section.settings.card_border_radius | default: 12 }}px;
+          padding: {{ section.settings.card_padding | default: 20 }}px;
+          display: flex;
+          align-items: center;
+          gap: {{ section.settings.card_gap_internal | default: 16 }}px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+          text-decoration: none;
+          color: inherit;
+          position: relative;
+          overflow: hidden;
+          will-change: transform, box-shadow, border-color;
+      }
+
+      .joy-program-card-completed {
+          opacity: {{ section.settings.completed_card_opacity | default: 0.7 }};
+      }
+
+      .joy-program-checkmark {
+          position: absolute;
+          top: {{ section.settings.checkmark_top | default: 12 }}px;
+          right: {{ section.settings.checkmark_right | default: 12 }}px;
+          width: 24px;
+          height: 24px;
+          background: {{ section.settings.primary_color | default: '#6B7280' }};
+          color: {{ section.settings.checkmark_color | default: '#FFFFFF' }};
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: bold;
+          z-index: 1;
+          animation: joy-pulse 2s ease-in-out infinite;
+          box-shadow: 0 0 0 0 rgba(107, 114, 128, 0.4);
+      }
+
+      @keyframes joy-pulse {
+          0% {
+              box-shadow: 0 0 0 0 rgba(107, 114, 128, 0.4);
+          }
+          70% {
+              box-shadow: 0 0 0 6px rgba(107, 114, 128, 0);
+          }
+          100% {
+              box-shadow: 0 0 0 0 rgba(107, 114, 128, 0);
+          }
+      }
+
+      .joy-program-card:hover {
+      {% if section.settings.enable_hover_effects != false %}{% assign hover_style = section.settings.hover_animation_style | default: 'enhanced' %}{% assign lift_distance = section.settings.hover_lift_distance | default: 8 %}{% assign scale_amount = section.settings.hover_scale_amount | default: 102 %}{% case hover_style %}{% when 'subtle' %} transform: translateY(-{{ lift_distance | divided_by: 2 }}px) scale(1);
+          box-shadow: none;
+      {% when 'dramatic' %} transform: translateY(-{{ lift_distance | times: 1.5 }}px) scale({{ scale_amount | plus: 3 | divided_by: 100.0 }});
+          box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.15),
+          0 15px 15px -5px rgba(0, 0, 0, 0.08),
+          0 0 0 2px rgba(107, 114, 128, 0.1);
+      {% else %} transform: translateY(-{{ lift_distance }}px) scale({{ scale_amount | divided_by: 100.0 }});
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04),
+          0 0 0 1px rgba(107, 114, 128, 0.05);
+      {% endcase %} border-color: {{ section.settings.card_hover_border_color | default: '#6B7280' }};
+          background: {{ section.settings.card_hover_background | default: '#FFFFFF' }};
+      {% endif %}
+      }
+
+      {% if section.settings.enable_shimmer_effect != false %}
+      .joy-program-card:hover::before {
+          opacity: 1;
+          transform: translateX(100%);
+      }
+
+      .joy-program-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+                  90deg,
+                  transparent,
+                  rgba(107, 114, 128, 0.1),
+                  transparent
+          );
+          transition: all 0.6s ease;
+          opacity: 0;
+          pointer-events: none;
+      }
+
+      {% endif %}
+
+      .joy-program-icon {
+          width: {{ section.settings.icon_size | default: 40 }}px;
+          height: {{ section.settings.icon_size | default: 40 }}px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: {{ section.settings.icon_background | default: 'rgba(107, 114, 128, 0.08)' }};
+          border-radius: {{ section.settings.icon_border_radius | default: 10 }}px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          overflow: hidden;
+      }
+
+      {% if section.settings.enable_hover_effects != false %}
+      .joy-program-card:hover .joy-program-icon {
+      {% assign hover_style = section.settings.hover_animation_style | default: 'enhanced' %}{% if hover_style == 'subtle' %} transform: scale(1);
+          background: {{ section.settings.icon_hover_background | default: 'rgba(107, 114, 128, 0.15)' }};
+          box-shadow: none;
+      {% else %}{% if section.settings.enable_icon_rotation != false %} transform: rotate(5deg) scale(1.1);
+      {% else %} transform: scale(1.1);
+      {% endif %} background: {{ section.settings.icon_hover_background | default: 'rgba(107, 114, 128, 0.15)' }};
+          box-shadow: 0 4px 8px rgba(107, 114, 128, 0.2);
+      {% endif %}
+      }
+
+      {% endif %}
+
+      .joy-program-icon img {
+          width: {{ section.settings.icon_image_size | default: 22 }}px;
+          height: {{ section.settings.icon_image_size | default: 22 }}px;
+          object-fit: contain;
+          opacity: 0.9;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      {% if section.settings.enable_hover_effects != false %}
+      .joy-program-card:hover .joy-program-icon img {
+      {% assign hover_style = section.settings.hover_animation_style | default: 'enhanced' %} opacity: 1;
+      {% if hover_style == 'subtle' %} transform: scale(1);
+      {% else %} transform: scale(1.1);
+      {% endif %}
+      }
+
+      {% endif %}
+
+      .joy-program-content {
+          flex: 1;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      {% if section.settings.enable_text_slide != false and section.settings.enable_hover_effects != false %}
+      .joy-program-card:hover .joy-program-content {
+          transform: translateX(4px);
+      }
+
+      {% endif %}
+
+      .joy-program-name {
+          font-size: {{ section.settings.program_name_size | default: 15 }}px;
+          font-weight: 500;
+          color: {{ section.settings.text_color | default: '#111827' }};
+          margin: 0 0 4px 0;
+          line-height: 1.4;
+          letter-spacing: -0.01em;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .joy-program-card:hover .joy-program-name {
+          color: {{ section.settings.primary_color | default: '#6B7280' }};
+          font-weight: 600;
+      }
+
+      .joy-program-description {
+          font-size: {{ section.settings.program_description_size | default: 13 }}px;
+          color: {{ section.settings.description_color | default: '#6B7280' }};
+          line-height: 1.5;
+          margin: 0;
+          font-weight: 400;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .joy-program-card:hover .joy-program-description {
+          color: {{ section.settings.description_hover_color | default: '#374151' }};
+      }
+
+
+      .joy-error-state {
+          background: #FFF3E0;
+          border: 2px solid #FFB74D;
+          border-radius: {{ section.settings.border_radius | default: 12 }}px;
+          padding: 24px;
+          text-align: center;
+          color: #E65100;
+          margin: 20px 0;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+          .joy-earn-content {
+              flex-direction: column;
+              gap: 30px;
+          }
+
+          .joy-banner-image {
+              flex: none;
+              width: 100%;
+              max-width: 100%;
+              min-height: {{ section.settings.banner_height_mobile | default: 200 }}px !important;
+              max-height: {{ section.settings.banner_max_height_mobile | default: 280 }}px !important;
+              height: {{ section.settings.banner_height_mobile | default: 200 }}px;
+          }
+
+          .joy-programs-grid {
+              grid-template-columns: repeat({{ section.settings.columns_mobile | default: 1 }}, 1fr);
+              gap: {{ section.settings.card_gap_mobile | default: 16 }}px;
+          }
+
+          .joy-programs-full-width {
+              grid-template-columns: repeat({{ section.settings.columns_mobile_no_banner | default: 1 }}, 1fr);
+          }
+
+          .joy-skeleton-loader {
+              grid-template-columns: repeat({{ section.settings.columns_mobile | default: 1 }}, 1fr);
+              gap: {{ section.settings.card_gap_mobile | default: 16 }}px;
+          }
+
+          .joy-skeleton-full-width {
+              grid-template-columns: repeat({{ section.settings.columns_mobile_no_banner | default: 1 }}, 1fr);
+          }
+
+          .joy-skeleton-card {
+              padding: {{ section.settings.card_padding_mobile | default: 20 }}px;
+          }
+
+          .joy-earn-title {
+              font-size: 24px;
+          }
+
+          .joy-program-card {
+              padding: {{ section.settings.card_padding_mobile | default: 16 }}px;
+          }
+      }
+  </style>
+
+  <div class="joy-custom-earn-container">
+    {% if section.settings.show_header %}
+      <div class="joy-earn-header">
+        <h2 class="joy-earn-title">{{ section.settings.title | default: 'Ways to Earn' }}</h2>
+        {% if section.settings.subtitle %}
+          <p class="joy-earn-subtitle">{{ section.settings.subtitle }}</p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div
+      class="joy-earn-content{% if section.settings.banner_image == blank and section.settings.show_banner_fallback != true %} joy-earn-content-no-banner{% endif %}">
+      {% if section.settings.banner_image != blank or section.settings.show_banner_fallback == true %}
+        <div class="joy-banner-image">
+          <!-- Banner image or fallback gradient applied via CSS background -->
+        </div>
+      {% endif %}
+
+      <joy-earning-programs
+        class="joy-programs-grid{% unless section.settings.banner_image %} joy-programs-full-width{% endunless %}"
+        data-section-id="{{ section.id }}"
+        data-customer-id="{{ customer.id | default: '' }}"
+        data-modal-login-signup-title="{{ section.settings.modal_login_signup_title | default: 'Join and Earn Rewards' }}"
+        data-modal-login-signup-description="{{ section.settings.modal_login_signup_description | default: 'Earn points and turn these into rewards!' }}"
+        data-modal-signup-button-text="{{ section.settings.modal_signup_button_text | default: 'Start Earning' }}"
+        data-modal-login-text="{{ section.settings.modal_login_text | default: 'Already a member?' }}"
+        data-modal-login-button-text="{{ section.settings.modal_login_button_text | default: 'Sign In' }}"
+        data-modal-close-text="{{ section.settings.modal_close_text | default: 'Close' }}"
+        data-modal-size="{{ section.settings.modal_size | default: 'medium' }}"
+      >
+        <!-- No loading state - content will appear when ready -->
+      </joy-earning-programs>
+    </div>
+  </div>
+</div>
+
+<script>
+  if (!customElements.get('joy-earning-programs')) {
+    customElements.define('joy-earning-programs', class JoyEarningPrograms extends HTMLElement {
+      constructor() {
+        super();
+        this.sectionId = this.dataset.sectionId;
+        this.customerId = this.dataset.customerId;
+        this.cachedCustomer = null; // Cache customer data at component level
+        this.isInitialized = false; // Prevent duplicate initialization
+        this.modalRegistry = new Map();
+      }
+
+      connectedCallback() {
+        this.initializeModalRegistry();
+        this.initializeJoyIntegration();
+      }
+
+      initializeModalRegistry() {
+        // Register birthday modal
+        this.modalRegistry.set('birthday', {
+          getContent: () => this.getBirthdayModalContent(),
+          validate: (modal) => this.validateBirthdayInput(modal),
+          handleAction: async (modal, program) => await this.handleBirthdayAction(modal, program),
+          setupValidation: (modal) => this.setupValidation(modal)
+        });
+
+        // Register newsletter modal
+        this.modalRegistry.set('sign_up_newsletter', {
+          getContent: () => this.getNewsletterModalContent(),
+          validate: (modal) => this.validateEmailInput(modal),
+          handleAction: async (modal, program) => await this.handleNewsletterAction(modal, program),
+          setupValidation: (modal) => this.setupValidation(modal)
+        });
+
+        // Register review modal
+        this.modalRegistry.set('write_review', {
+          getContent: () => this.getReviewModalContent(),
+          validate: () => true,
+          handleAction: async (modal, program) => await this.handleReviewAction(modal, program),
+          setupValidation: () => {
+          }
+        });
+
+        // Register referral modal
+        this.modalRegistry.set('referral_friend', {
+          getContent: () => this.getReferralModalContent(),
+          validate: () => true,
+          handleAction: async (modal, program) => await this.handleReferralAction(modal, program),
+          setupValidation: () => {
+          }
+        });
+
+        // Register custom program modal
+        this.modalRegistry.set('custom_program', {
+          getContent: (program) => this.getCustomProgramModalContent(program),
+          validate: (modal, program) => this.validateCustomProgramInput(modal, program),
+          handleAction: async (modal, program) => await this.handleCustomProgramAction(modal, program),
+          setupValidation: (modal, program) => this.setupValidation(modal, program)
+        });
+
+        // Register login/signup modal
+        this.modalRegistry.set('login_signup', {
+          getContent: () => this.getLoginSignupModalContent(),
+          validate: () => true,
+          handleAction: async (modal, program) => await this.handleLoginSignupAction(modal, program),
+          setupValidation: () => {
+          }
+        });
+
+        // Register social events modals
+        const socialEvents = [
+          'like_facebook', 'follow_instagram', 'follow_twitter', 'follow_pinterest',
+          'follow_tiktok', 'subscribe_youtube', 'join_discord', 'join_telegram',
+          'join_whatsapp', 'join_line', 'google_maps_review', 'interact_website', 'share_twitter'
+        ];
+
+        socialEvents.forEach(eventType => {
+          this.modalRegistry.set(eventType, {
+            getContent: (program) => this.getSocialEventModalContent(program),
+            validate: () => true,
+            handleAction: async (modal, program) => await this.handleSocialEventAction(modal, program),
+            setupValidation: () => {
+            }
+          });
+        });
+      }
+
+      initializeJoyIntegration() {
+        // Prevent duplicate initialization
+        if (this.isInitialized) {
+          return;
+        }
+
+        // Listen for Joy ready event - this is when window.joyInstance becomes available
+        window.addEventListener('joy:ready', () => {
+          if (!this.isInitialized) {
+            this.isInitialized = true;
+            this.loadEarningPrograms();
+          }
+        });
+
+        // Also try immediately in case Joy is already loaded
+        if (window.joyInstance && !this.isInitialized) {
+          this.isInitialized = true;
+          this.loadEarningPrograms();
+        }
+      }
+
+      async loadEarningPrograms() {
+        // Access Joy instance from window.joyInstance (available after joy:ready event)
+        const joyInstance = window.joyInstance;
+
+        if (!joyInstance) {
+          this.showNoDataMessage('Joy SDK not loaded');
+          return;
+        }
+
+        // Verify earnPrograms method exists on Joy instance
+        if (typeof joyInstance.earnPrograms !== 'function') {
+          this.showNoDataMessage('Joy SDK not properly initialized');
+          return;
+        }
+
+        // Fetch customer data once and cache it
+        if (this.customerId && !this.cachedCustomer) {
+          try {
+            this.cachedCustomer = await joyInstance.customer();
+          } catch (error) {
+            console.error('Error fetching customer data:', error);
+          }
+        }
+
+        try {
+          // Use async/await pattern
+          const earnProgramsData = await joyInstance.earnPrograms();
+
+          if (earnProgramsData) {
+            // The API returns an array directly, not nested in data.earning
+            let programs = earnProgramsData;
+
+            // Handle different possible response formats
+            if (earnProgramsData.data) {
+              programs = earnProgramsData.data;
+            }
+            if (earnProgramsData.earning) {
+              programs = earnProgramsData.earning;
+            }
+
+            if (programs && Array.isArray(programs) && programs.length > 0) {
+              // Filter to only earning type programs
+              const earningPrograms = programs.filter(program => program.type === 'earning');
+
+              if (earningPrograms.length > 0) {
+                await this.renderPrograms(earningPrograms);
+              } else {
+                this.showNoDataMessage('No earning programs found');
+              }
+            } else {
+              this.showNoDataMessage('No earning programs configured');
+            }
+          } else {
+            this.showNoDataMessage('No earning programs data available');
+          }
+        } catch (accessError) {
+          console.error('Error calling earnPrograms:', accessError);
+          this.showNoDataMessage('Error accessing Joy API: ' + (accessError.message || 'Unknown error'));
+        }
+      }
+
+      async renderPrograms(programs) {
+        // Clear container and render only API programs
+        this.innerHTML = '';
+
+        const activePrograms = programs.filter(program => program.status && !program.isDraft);
+
+        if (activePrograms.length === 0) {
+          this.showNoDataMessage('No active earning programs');
+          return;
+        }
+
+        // Create cards in parallel for better performance
+        const cardPromises = activePrograms.map(program => this.createProgramCard(program));
+        const cards = await Promise.all(cardPromises);
+
+        cards.forEach(card => {
+          this.appendChild(card);
+        });
+      }
+
+      async isProgramCompleted(program, customer = null) {
+        if (!this.customerId || !program) return false;
+
+        // Use passed customer or cached customer
+        const customerData = customer || this.cachedCustomer;
+
+        // Use Joy SDK's hasEarnProgram method to check if program can still be earned
+        if (window.joyInstance && typeof window.joyInstance.hasEarnProgram === 'function' && customerData) {
+          try {
+            // hasEarnProgram returns true if program can be earned (not completed)
+            // So we return the opposite for completion status
+            console.log("has earn program", customerData, program);
+            const canEarn = window.joyInstance.hasEarnProgram({customer: customerData, program});
+            return !canEarn;
+          } catch (error) {
+          }
+        }
+
+        // Fallback logic
+        // For signup programs, consider completed if user is logged in
+        if (program.event === 'sign_up') {
+          return true;
+        }
+
+        // Check program's completion status from API data if available
+        if (program.isCompleted !== undefined) {
+          return program.isCompleted;
+        }
+
+        // Check if program has completion data properties
+        if (program.completed !== undefined) {
+          return program.completed;
+        }
+
+        // For other programs, assume not completed if no data available
+        return false;
+      }
+
+      async createProgramCard(program) {
+        const card = document.createElement('div');
+        card.className = 'joy-program-card';
+        card.style.cursor = 'pointer';
+
+        // Implement sophisticated click behavior based on React component logic
+        card.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.handleProgramClick(program);
+        });
+
+        // Build card content - prioritize loyaltyPageCustomIcon from API
+        const iconUrl = program.loyaltyPageCustomIcon;
+        const description = this.getProgramDescription(program);
+        const fallbackEmoji = this.getFallbackEmoji(program.event);
+        const isCompleted = await this.isProgramCompleted(program, this.cachedCustomer);
+        const hasValidIcon = iconUrl && iconUrl !== '' && !iconUrl.includes('undefined') && !iconUrl.includes('null');
+
+        // Add completed class if program is completed
+        if (isCompleted) {
+          card.classList.add('joy-program-card-completed');
+        }
+
+        card.innerHTML = `
+        ${isCompleted ? '<div class="joy-program-checkmark">✓</div>' : ''}
+        <div class="joy-program-icon">
+          ${hasValidIcon ? `
+            <img src="${iconUrl}" alt="${program.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div style="display:none; width:100%; height:100%; background:rgba(107, 114, 128, 0.08); border-radius:inherit; align-items:center; justify-content:center; font-size:18px; color:#6B7280;">${fallbackEmoji}</div>
+          ` : `
+            <div style="width:100%; height:100%; background:rgba(107, 114, 128, 0.08); border-radius:inherit; display:flex; align-items:center; justify-content:center; font-size:18px; color:#6B7280;">${fallbackEmoji}</div>
+          `}
+        </div>
+        <div class="joy-program-content">
+          <div class="joy-program-name">${program.title}</div>
+          <div class="joy-program-description">${description}</div>
+        </div>
+      `;
+
+        return card;
+      }
+
+      async handleProgramClick(program) {
+        if (!this.isUserLoggedIn()) {
+          this.showLoginSignupModal();
+          return;
+        }
+
+        // Check if this is a social event - force to use our modal system
+        const socialEvents = [
+          'like_facebook', 'follow_instagram', 'follow_twitter', 'follow_pinterest',
+          'follow_tiktok', 'subscribe_youtube', 'join_discord', 'join_telegram',
+          'join_whatsapp', 'join_line', 'google_maps_review', 'interact_website', 'share_twitter'
+        ];
+
+        if (socialEvents.includes(program.event)) {
+          this.showModal(program);
+          return;
+        }
+
+        // Events that should do nothing
+        const noActionEvents = ['place_order', 'sign_up'];
+        if (noActionEvents.includes(program.event)) {
+          return; // Do nothing
+        }
+
+        const sdkHandled = await this.tryHandleWithJoySDK(program);
+        if (sdkHandled) {
+          return;
+        }
+
+        this.handleProgramFallback(program);
+      }
+
+      isUserLoggedIn() {
+        return Boolean(this.customerId);
+      }
+
+      showLoginSignupModal() {
+        const loginSignupProgram = {event: 'login_signup', title: 'Join and Earn Rewards', earnPoint: null};
+        this.showModal(loginSignupProgram);
+      }
+
+      async tryHandleWithJoySDK(program) {
+        if (!this.isJoySDKAvailable()) {
+          return false;
+        }
+
+        try {
+          const result = await window.joyInstance.handleEarningProgram({program, customer: this.cachedCustomer});
+
+          if (this.isLoginRequired(result)) {
+            this.redirectToAuth(program);
+            return true;
+          }
+
+          if (this.shouldOpenModal(result)) {
+            this.handleModalRequest(program);
+            return true;
+          }
+
+          return true; // SDK handled successfully
+        } catch (error) {
+          return false; // Fall back to original implementation
+        }
+      }
+
+      isJoySDKAvailable() {
+        return window.joyInstance && typeof window.joyInstance.handleEarningProgram === 'function';
+      }
+
+      isLoginRequired(result) {
+        return result && result.status === false && result.error && result.error.includes('login');
+      }
+
+      redirectToAuth(program) {
+        if (program.event === 'sign_up') {
+          window.location.href = '/account/register';
+          return;
+        }
+
+        window.location.href = '/account/login';
+      }
+
+      shouldOpenModal(result) {
+        return result && result.shouldOpenModal;
+      }
+
+      handleModalRequest(program) {
+        if (this.programNeedsCustomModal(program.event)) {
+          this.showModal(program);
+          return;
+        }
+
+        this.openJoyModal(program);
+      }
+
+      programNeedsCustomModal(event) {
+        const socialEvents = [
+          'like_facebook', 'follow_instagram', 'follow_twitter', 'follow_pinterest',
+          'follow_tiktok', 'subscribe_youtube', 'join_discord', 'join_telegram',
+          'join_whatsapp', 'join_line', 'google_maps_review', 'interact_website', 'share_twitter'
+        ];
+        const programsWithModals = ['birthday', 'sign_up_newsletter', 'write_review', 'referral_friend', 'login_signup', ...socialEvents];
+        return programsWithModals.includes(event);
+      }
+
+      handleProgramFallback(program) {
+        const {event, urlAtLoyaltyPage, typeCustom = '', linkVisit} = program || {};
+
+        if (this.isCustomVisitProgram(event, typeCustom, linkVisit)) {
+          this.openCustomVisitUrl(linkVisit);
+          return;
+        }
+
+        if (this.isSurveyProgram(event)) {
+          this.openSurveyUrl(program);
+          return;
+        }
+
+        if (urlAtLoyaltyPage) {
+          window.open(urlAtLoyaltyPage, '_blank');
+          return;
+        }
+
+        if (this.programNeedsCustomModal(program.event)) {
+          this.showModal(program);
+          return;
+        }
+
+        if (this.isSocialOrNoModalProgram(event)) {
+          return; // Already handled by SDK above
+        }
+
+        this.openJoyModal(program);
+      }
+
+      isCustomVisitProgram(event, typeCustom, linkVisit) {
+        return event === 'custom_program' &&
+          (typeCustom.includes('visit_page') || typeCustom.includes('custom_trigger')) &&
+          linkVisit;
+      }
+
+      openCustomVisitUrl(linkVisit) {
+        const cleanUrl = linkVisit.replace(/^https?:\/\//, '');
+        window.open(`https://${cleanUrl}`, '_blank');
+      }
+
+      isSurveyProgram(event) {
+        return event === 'fill_survey';
+      }
+
+      openSurveyUrl(program) {
+        const {urlAtLoyaltyPage, link} = program;
+        const targetUrl = urlAtLoyaltyPage || (link && `https://${link.replace(/^https?:\/\//, '')}`);
+
+        if (targetUrl) {
+          window.open(targetUrl, '_blank');
+        }
+      }
+
+      isSocialOrNoModalProgram(event) {
+        const socialEvents = [
+          'like_facebook', 'follow_instagram', 'follow_twitter', 'follow_pinterest',
+          'follow_tiktok', 'subscribe_youtube', 'join_discord', 'join_telegram',
+          'join_whatsapp', 'join_line', 'google_maps_review', 'interact_website', 'share_on_x'
+        ];
+        const programsNoModal = ['sign_up', ...socialEvents];
+        return programsNoModal.includes(event);
+      }
+
+
+      openSocialPopup(url, program) {
+        // Simple popup center implementation based on Joy's approach
+        const width = 600;
+        const height = 700;
+        const left = (window.screen.width / 2) - (width / 2);
+        const top = (window.screen.height / 2) - (height / 2);
+
+        const popup = window.open(
+          url,
+          'social_action',
+          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+        );
+
+        if (popup) {
+          popup.focus();
+        } else {
+          // Fallback to regular tab if popup was blocked
+          window.open(url, '_blank');
+        }
+      }
+
+      openJoyWidget(program) {
+        // Try to open the main Joy widget/popup
+        if (typeof window.avadaJoyTrigger === 'function') {
+          window.avadaJoyTrigger();
+          return;
+        }
+
+        if (window.joyInstance && typeof window.joyInstance.openWidget === 'function') {
+          window.joyInstance.openWidget();
+          return;
+        }
+
+        // Fallback to URL if available
+        if (program.urlAtLoyaltyPage) {
+          window.open(program.urlAtLoyaltyPage, '_blank');
+          return;
+        }
+
+        if (program.link) {
+          const cleanUrl = program.link.replace(/^https?:\/\//, '');
+          window.open(`https://${cleanUrl}`, '_blank');
+          return;
+        }
+
+      }
+
+      openJoyModal(program) {
+        // Try different ways to open Joy modal/widget
+        if (typeof window.JoyApp !== 'undefined' && window.JoyApp.openWidget) {
+          window.JoyApp.openWidget(program);
+          return;
+        }
+
+        if (typeof window.Joy !== 'undefined' && window.Joy.openModal) {
+          window.Joy.openModal(program);
+          return;
+        }
+
+        if (window.joyInstance && typeof window.joyInstance.openModal === 'function') {
+          window.joyInstance.openModal(program);
+          return;
+        }
+
+        // Check if Joy loyalty page modal exists in DOM
+        const existingModal = document.querySelector('.joy-loyalty-modal, #joy-modal, [data-joy-modal]');
+        if (existingModal) {
+          // Trigger existing Joy modal with program data
+          const event = new CustomEvent('joy:openModal', {
+            detail: {program, customer: this.customerId}
+          });
+          window.dispatchEvent(event);
+          return;
+        }
+
+        // Fallback to opening Joy widget
+        this.openJoyWidget(program);
+      }
+
+      showModal(program) {
+        // Get modal handler from registry
+        const modalHandler = this.modalRegistry.get(program.event);
+        if (!modalHandler) {
+          return;
+        }
+
+        // Get modal content from registered handler
+        const modalContent = modalHandler.getContent(program);
+
+        // Create the modal
+        this.createModal(program, modalContent, modalHandler);
+      }
+
+      createModal(program, modalContent, modalHandler) {
+        // Remove any existing modals first
+        const existingModal = document.querySelector('.joy-custom-modal');
+        if (existingModal) {
+          existingModal.remove();
+        }
+
+        // Check if this is the login/signup modal
+        const isLoginSignupModal = program.event === 'login_signup';
+        const modalSize = this.getSectionSetting('modal_size') || 'medium';
+
+        // Get max-width based on modal size
+        let maxWidth = '400px'; // small
+        if (modalSize === 'medium') {
+          maxWidth = '500px';
+        } else if (modalSize === 'large') {
+          maxWidth = '650px';
+        }
+
+        // Get primary color from section settings
+        const primaryColor = this.getSectionPrimaryColor();
+        const primaryColorHover = this.darkenColor(primaryColor, 0.1);
+
+        const modal = document.createElement('div');
+        modal.className = 'joy-custom-modal';
+        modal.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          animation: joy-modal-fade-in 0.3s ease;
+          padding: 20px;
+        `;
+
+        modal.innerHTML = `
+          <div class="joy-custom-modal-content joy-modal-${modalSize} ${isLoginSignupModal ? 'joy-login-signup-modal' : ''}" style="
+            background: white;
+            border-radius: 12px;
+            max-width: ${maxWidth};
+            width: 100%;
+            max-height: 80vh;
+            overflow: auto;
+            position: relative;
+            animation: joy-modal-slide-up 0.3s ease;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          ">
+            <button class="joy-custom-modal-close" style="
+              position: absolute;
+              top: 16px;
+              right: 16px;
+              background: none;
+              border: none;
+              font-size: 24px;
+              cursor: pointer;
+              color: #666;
+              width: 32px;
+              height: 32px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 50%;
+              z-index: 1;
+            ">&times;</button>
+            <div class="joy-custom-modal-body" style="padding: ${isLoginSignupModal ? '40px 32px' : '32px'};">
+              ${!isLoginSignupModal ? `
+                <div class="joy-modal-program-info" style="
+                  display: flex;
+                  align-items: flex-start;
+                  gap: 12px;
+                  margin-bottom: 20px;
+                ">
+                  <div class="joy-modal-program-icon" style="
+                    width: 40px;
+                    height: 40px;
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  ">
+                    <img src="${program.loyaltyPageCustomIcon || this.getDefaultIcon(program.event)}"
+                         alt="${program.title}"
+                         style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div style="display:none; width:40px; height:40px; background:rgba(107, 114, 128, 0.1); border-radius:8px; align-items:center; justify-content:center; font-size:20px; color:#6B7280;">${this.getFallbackEmoji(program.event)}</div>
+                  </div>
+                  <div class="joy-modal-program-text">
+                    <h3 style="margin: 0 0 6px 0; font-size: 16px; font-weight: 600; color: #1f2937; line-height: 1.3;">${program.title}</h3>
+                    <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.4;">${this.getProgramDescription(program)}</p>
+                  </div>
+                </div>
+              ` : ''}
+              ${modalContent.form}
+              ${!modalContent.hideActions ? `
+                <div class="joy-modal-actions" style="
+                  display: flex;
+                  gap: 12px;
+                  justify-content: flex-end;
+                  padding-top: 20px;
+                ">
+                  <button class="joy-modal-button-cancel" style="
+                    padding: 10px 20px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    background: #f3f4f6;
+                    color: #6b7280;
+                    transition: all 0.2s ease;
+                    min-width: 80px;
+                  ">Cancel</button>
+                  <button class="joy-modal-button-action" data-program-event="${program.event}" style="
+                    padding: 10px 20px;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    background: ${primaryColor};
+                    color: white;
+                    transition: all 0.2s ease;
+                    min-width: 80px;
+                    ${modalContent.requiresInput || modalContent.isDisabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}
+                  " ${modalContent.requiresInput || modalContent.isDisabled ? 'disabled' : ''}>${modalContent.actionText}</button>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+
+        // Add modal styles to document head if not already present
+        this.addModalStyles();
+
+        // Add event listeners
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal || e.target.classList.contains('joy-custom-modal-close') || e.target.classList.contains('joy-modal-button-cancel')) {
+            this.closeModal(modal);
+          } else if (e.target.classList.contains('joy-modal-button-action')) {
+            if (!e.target.disabled) {
+              this.handleModalAction(modal, program, modalHandler);
+            }
+          } else if (e.target.classList.contains('joy-button-primary') || e.target.classList.contains('joy-button-secondary')) {
+            // Handle login/signup button clicks
+            const action = e.target.getAttribute('data-action');
+            if (action === 'signup') {
+              window.location.href = '/account/register';
+            } else if (action === 'login') {
+              window.location.href = '/account/login';
+            }
+          }
+        });
+
+        // Close on escape key
+        const handleEscape = (e) => {
+          if (e.key === 'Escape') {
+            this.closeModal(modal);
+            document.removeEventListener('keydown', handleEscape);
+          }
+        };
+        document.addEventListener('keydown', handleEscape);
+
+        document.body.appendChild(modal);
+
+        // Setup validation after modal is added to DOM
+        if (modalHandler.setupValidation) {
+          modalHandler.setupValidation(modal, program);
+        }
+      }
+
+      closeModal(modal) {
+        modal.style.animation = 'joy-modal-fade-out 0.3s ease forwards';
+        setTimeout(() => {
+          if (modal.parentNode) {
+            modal.parentNode.removeChild(modal);
+          }
+        }, 300);
+      }
+
+      addModalStyles() {
+        if (document.getElementById('joy-modal-styles')) return;
+
+        const primaryColor = this.getSectionPrimaryColor();
+        const primaryColorHover = this.darkenColor(primaryColor, 0.1);
+        const primaryColorAlpha20 = primaryColor + '20';
+        const primaryColorAlpha10 = primaryColor + '10';
+
+        const style = document.createElement('style');
+        style.id = 'joy-modal-styles';
+        style.textContent = `
+          @keyframes joy-modal-fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+
+          @keyframes joy-modal-fade-out {
+            from { opacity: 1; }
+            to { opacity: 0; }
+          }
+
+          @keyframes joy-modal-slide-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+          }
+
+          @keyframes joy-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+
+          .joy-modal-button-cancel:hover {
+            background: #e5e7eb;
+            color: #374151;
+          }
+
+          .joy-modal-button-action:hover:not(:disabled) {
+            background: ${primaryColorHover};
+          }
+
+          .joy-form-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            box-sizing: border-box;
+            background: white;
+          }
+
+          .joy-form-input:focus {
+            outline: none;
+            border-color: ${primaryColor};
+            box-shadow: 0 0 0 3px ${primaryColorAlpha20};
+          }
+
+          .joy-form-input:disabled {
+            background-color: #f9fafb;
+            color: #9ca3af;
+            cursor: not-allowed;
+          }
+
+          .joy-form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+            font-size: 14px;
+          }
+
+          .joy-form-help {
+            display: block;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #6b7280;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid ${primaryColor};
+            background: ${primaryColorAlpha10};
+          }
+
+          .joy-form-help:empty {
+            display: none;
+          }
+
+          .joy-modal-form {
+            margin: 0 0 20px 0;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
+          }
+
+          /* Modal Size Variants */
+          .joy-modal-small {
+            max-width: 400px;
+          }
+
+          .joy-modal-medium {
+            max-width: 500px;
+          }
+
+          .joy-modal-large {
+            max-width: 650px;
+          }
+
+          /* Login/Signup Modal Styles */
+          .joy-login-signup-modal .joy-custom-modal-body {
+            padding: 40px 32px;
+          }
+
+          .joy-modal-small.joy-login-signup-modal .joy-custom-modal-body {
+            padding: 32px 24px;
+          }
+
+          .joy-modal-large.joy-login-signup-modal .joy-custom-modal-body {
+            padding: 48px 48px;
+          }
+
+          .joy-login-signup-content {
+            text-align: center;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+          }
+
+          .joy-login-signup-content h3 {
+            margin: 0 0 12px 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: #1f2937;
+            line-height: 1.2;
+          }
+
+          .joy-login-signup-description {
+            margin: 0 0 40px 0;
+            font-size: 16px;
+            color: #6b7280;
+            line-height: 1.5;
+          }
+
+          .joy-login-signup-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+            width: 100%;
+          }
+
+          .joy-button-primary {
+            background: ${primaryColor};
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 16px 40px;
+            font-size: 16px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 200px;
+            box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
+          }
+
+          .joy-button-primary:hover {
+            background: ${primaryColorHover};
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(107, 114, 128, 0.4);
+          }
+
+          .joy-login-signup-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+          }
+
+          .joy-login-text {
+            font-size: 15px;
+            color: #6b7280;
+            font-weight: 400;
+            margin: 0;
+          }
+
+          .joy-button-secondary {
+            background: transparent;
+            color: ${primaryColor};
+            border: 2px solid ${primaryColor};
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+          }
+
+          .joy-button-secondary:hover {
+            background: ${primaryColor};
+            color: white;
+            transform: translateY(-1px);
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      getSectionPrimaryColor() {
+        // Try to get the primary color from the section element's computed styles or dataset
+        const sectionElement = document.querySelector(`[data-section-id="${this.sectionId}"]`);
+        if (sectionElement) {
+          // Check if there's a CSS custom property we can read
+          const computedStyles = getComputedStyle(sectionElement);
+          const primaryColor = computedStyles.getPropertyValue('--primary-color');
+          if (primaryColor) {
+            return primaryColor.trim();
+          }
+        }
+        // Fallback to default or extract from Liquid settings
+        return '{{ section.settings.primary_color | default: "#D4A574" }}';
+      }
+
+      darkenColor(color, amount) {
+        // Simple color darkening function
+        const hex = color.replace('#', '');
+        const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - Math.round(255 * amount));
+        const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - Math.round(255 * amount));
+        const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - Math.round(255 * amount));
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+      }
+
+      getModalHandler(program) {
+        // Check for custom program with specific handler
+        if (program.event === 'custom_program' && program.typeCustom) {
+          // Could register specific custom program types if needed
+          return this.modalRegistry.get('custom_program');
+        }
+
+        // Get handler from registry
+        return this.modalRegistry.get(program.event);
+      }
+
+
+      getNewsletterModalContent() {
+        const newsletterLabel = this.getSectionSetting('modal_newsletter_label') || 'Email address:';
+        const newsletterPlaceholder = this.getSectionSetting('modal_newsletter_placeholder') || 'your@email.com';
+        const newsletterHelp = this.getSectionSetting('modal_newsletter_help') || 'Subscribe to get exclusive offers and updates';
+        const newsletterButton = this.getSectionSetting('modal_newsletter_button') || 'Subscribe';
+
+        return {
+          form: `
+          <div class="joy-modal-form">
+            <label class="joy-form-label">${newsletterLabel}</label>
+            <input type="email" id="joy-email-input" class="joy-form-input" placeholder="${newsletterPlaceholder}" required>
+            <small class="joy-form-help">${newsletterHelp}</small>
+          </div>
+        `,
+          actionText: newsletterButton,
+          requiresInput: true
+        };
+      }
+
+      getSocialEventModalContent(program) {
+        // Map event types to user-friendly descriptions
+        const socialEventDescriptions = {
+          'like_facebook': 'Like our Facebook page to stay connected and get exclusive updates!',
+          'follow_instagram': 'Follow us on Instagram for behind-the-scenes content and special offers!',
+          'follow_twitter': 'Follow us on Twitter to stay up-to-date with our latest news!',
+          'follow_pinterest': 'Follow us on Pinterest for inspiration and product ideas!',
+          'follow_tiktok': 'Follow us on TikTok for fun content and exclusive deals!',
+          'subscribe_youtube': 'Subscribe to our YouTube channel for tutorials and reviews!',
+          'join_discord': 'Join our Discord community to connect with other customers!',
+          'join_telegram': 'Join our Telegram channel for instant notifications!',
+          'join_whatsapp': 'Join our WhatsApp group for exclusive offers!',
+          'join_line': 'Add us on LINE for easy communication!',
+          'google_maps_review': 'Leave us a review on Google Maps to help other customers!',
+          'interact_website': 'Visit our website and explore our content!',
+          'share_twitter': 'Share our content on X (Twitter) to spread the word and earn rewards!'
+        };
+
+        const description = socialEventDescriptions[program.event] || 'Complete this social action to earn rewards!';
+
+        return {
+          form: `
+            <div class="joy-modal-form">
+              <p class="joy-form-description" style="margin: 0 0 20px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">${description}</p>
+              <p style="margin: 0; font-size: 13px; color: #9ca3af; line-height: 1.4;">
+                Click the button below to complete this action. You'll be redirected to the appropriate platform.
+              </p>
+            </div>
+          `,
+          actionText: 'Complete Action',
+          requiresInput: false
+        };
+      }
+
+      getReviewModalContent() {
+        const reviewDescription = this.getSectionSetting('modal_review_description') || 'Choose a product to review and earn points:';
+        const reviewButtonText = this.getSectionSetting('modal_review_button_text') || 'Review Your Recent Purchase';
+        const reviewHelp = this.getSectionSetting('modal_review_help') || 'You\'ll be redirected to leave your review';
+        const reviewAction = this.getSectionSetting('modal_review_action') || 'Write Review';
+
+        return {
+          form: `
+          <div class="joy-modal-form">
+            <p class="joy-form-description">${reviewDescription}</p>
+            <div class="joy-products-list">
+              <button class="joy-product-item">${reviewButtonText}</button>
+            </div>
+            <small class="joy-form-help">${reviewHelp}</small>
+          </div>
+        `,
+          actionText: reviewAction,
+          requiresInput: false
+        };
+      }
+
+      getReferralModalContent() {
+        const referralDescription = this.getSectionSetting('modal_referral_description') || 'Share your referral link with friends!';
+        const referralCopyButton = this.getSectionSetting('modal_referral_copy_button') || 'Copy Link';
+        const referralHelp = this.getSectionSetting('modal_referral_help') || 'When your friends sign up using your link, you both earn points!';
+        const referralAction = this.getSectionSetting('modal_referral_action') || 'Share Now';
+
+        return {
+          form: `
+          <div class="joy-modal-form">
+            <p class="joy-form-description">${referralDescription}</p>
+            <div class="joy-referral-link-container">
+              <input type="text" class="joy-form-input" value="${window.location.origin}/referral" readonly>
+              <button class="joy-copy-button">${referralCopyButton}</button>
+            </div>
+            <small class="joy-form-help">${referralHelp}</small>
+          </div>
+        `,
+          actionText: referralAction,
+          requiresInput: false
+        };
+      }
+
+      getCustomProgramModalContent(program) {
+        if (this.isFormBasedCustomProgram(program)) {
+          return this.getCustomFormModalContent(program);
+        }
+
+        return this.getDefaultCustomProgramContent(program);
+      }
+
+      isFormBasedCustomProgram(program) {
+        return program.typeCustom && program.typeCustom.includes('form');
+      }
+
+      getCustomFormModalContent(program) {
+        const customFormLabel = program.customFormLabel || this.getSectionSetting('modal_custom_form_label') || 'Enter your information:';
+        const customFormHelp = program.customFormHelp || this.getSectionSetting('modal_custom_form_help') || 'Please provide the requested information';
+        const customSubmit = this.getSectionSetting('modal_custom_submit') || 'Submit';
+
+        return {
+          form: `
+          <div class="joy-modal-form">
+            <label class="joy-form-label">${customFormLabel}</label>
+            <textarea id="joy-custom-input" class="joy-form-textarea" rows="4" required></textarea>
+            <small class="joy-form-help">${customFormHelp}</small>
+          </div>
+        `,
+          actionText: customSubmit,
+          requiresInput: true
+        };
+      }
+
+      getDefaultCustomProgramContent(program) {
+        const customContinue = this.getSectionSetting('modal_custom_continue') || 'Continue';
+
+        return {
+          form: `
+          <div class="joy-modal-form">
+            <p class="joy-form-description">${program.description || 'Complete this action to earn points'}</p>
+          </div>
+        `,
+          actionText: customContinue,
+          requiresInput: false
+        };
+      }
+
+      getLoginSignupModalContent() {
+        return {
+          form: `
+            <div class="joy-login-signup-content">
+              <h3>${this.getSectionSetting('modal_login_signup_title') || 'Join and Earn Rewards'}</h3>
+              <p class="joy-login-signup-description">${this.getSectionSetting('modal_login_signup_description') || 'Earn points and turn these into rewards!'}</p>
+              <div class="joy-login-signup-buttons">
+                <button class="joy-button-primary" data-action="signup">${this.getSectionSetting('modal_signup_button_text') || 'Start Earning'}</button>
+                <div class="joy-login-signup-divider">
+                  <span class="joy-login-text">${this.getSectionSetting('modal_login_text') || 'Already a member?'}</span>
+                  <button class="joy-button-secondary" data-action="login">${this.getSectionSetting('modal_login_button_text') || 'Sign In'}</button>
+                </div>
+              </div>
+            </div>
+          `,
+          actionText: '', // No action button needed for this modal
+          requiresInput: false,
+          isDisabled: false,
+          hideActions: true // Flag to hide the default action buttons
+        };
+      }
+
+      // Copy all the modal content methods here
+      getBirthdayModalContent() {
+        const hasBirthday = this.customerHasBirthday();
+
+        if (hasBirthday) {
+          return this.getExistingBirthdayModalContent();
+        }
+
+        return this.getNewBirthdayModalContent();
+      }
+
+      customerHasBirthday() {
+        return this.cachedCustomer?.birthMonth && this.cachedCustomer?.birthday;
+      }
+
+      getExistingBirthdayModalContent() {
+        const birthdayValue = this.formatExistingBirthdayForInput();
+        const helpText = this.getSectionSetting('modal_birthday_saved_message') || 'Your birthday is already saved!';
+        const actionText = this.getSectionSetting('modal_birthday_saved_text') || 'Birthday saved';
+        const primaryColor = this.getSectionPrimaryColor();
+        const birthdayLabel = this.getSectionSetting('modal_birthday_label') || 'Enter your birthday:';
+
+        return this.buildBirthdayModalContent({
+          birthdayValue,
+          isDisabled: true,
+          helpText,
+          actionText,
+          primaryColor,
+          birthdayLabel
+        });
+      }
+
+      getNewBirthdayModalContent() {
+        const birthdayLabel = this.getSectionSetting('modal_birthday_label') || 'Enter your birthday:';
+        const actionText = this.getSectionSetting('modal_birthday_save_text') || 'Save birthday';
+        const primaryColor = this.getSectionPrimaryColor();
+
+        return this.buildBirthdayModalContent({
+          birthdayValue: '',
+          isDisabled: false,
+          helpText: '',
+          actionText,
+          primaryColor,
+          birthdayLabel
+        });
+      }
+
+      formatExistingBirthdayForInput() {
+        if (this.isBirthdayInSlashFormat()) {
+          return this.parseBirthdayFromSlashFormat();
+        }
+
+        return this.parseBirthdayFromSeparateFields();
+      }
+
+      isBirthdayInSlashFormat() {
+        return typeof this.cachedCustomer.birthday === 'string' && this.cachedCustomer.birthday.includes('/');
+      }
+
+      parseBirthdayFromSlashFormat() {
+        const birthdayParts = this.cachedCustomer.birthday.split('/');
+
+        if (birthdayParts.length >= 2) {
+          const day = birthdayParts[0].padStart(2, '0');
+          const month = birthdayParts[1].padStart(2, '0');
+          return this.formatDateForInput(day, month);
+        }
+
+        return this.parseBirthdayFromSeparateFields();
+      }
+
+      parseBirthdayFromSeparateFields() {
+        const month = String(this.cachedCustomer.birthMonth).padStart(2, '0');
+        const day = String(this.cachedCustomer.birthday).padStart(2, '0');
+        return this.formatDateForInput(day, month);
+      }
+
+      formatDateForInput(day, month) {
+        const currentYear = new Date().getFullYear();
+        return `${currentYear}-${month}-${day}`;
+      }
+
+      buildBirthdayModalContent({birthdayValue, isDisabled, helpText, actionText, primaryColor, birthdayLabel}) {
+
+        return {
+          form: `
+            <div class="joy-modal-form">
+              <label class="joy-form-label">${birthdayLabel}</label>
+              <input type="date"
+                id="joy-birthday-input"
+                class="joy-form-input"
+                ${birthdayValue ? `value="${birthdayValue}"` : ''}
+                ${isDisabled ? 'disabled' : 'required'}>
+              <small class="joy-form-help" style="${helpText ? `color: ${primaryColor}; border: 1px solid ${primaryColor}; padding: 8px; border-radius: 4px; display: block; margin-top: 8px; background: ${primaryColor}10;` : ''}">${helpText}</small>
+            </div>
+          `,
+          actionText: actionText,
+          requiresInput: !isDisabled,
+          isDisabled: isDisabled
+        };
+      }
+
+      // Modal action handlers
+      async handleBirthdayAction(modal, program, actionButton, originalButtonText) {
+        const birthdayData = this.extractBirthdayData(modal);
+        if (!birthdayData) return;
+
+        const {month, day} = birthdayData;
+
+        try {
+          await this.saveBirthdayToJoySDK(month, day);
+          this.showBirthdaySuccessState(actionButton);
+          await this.refreshCustomerData();
+        } catch (error) {
+          this.showBirthdayErrorState(actionButton, originalButtonText, error);
+        }
+      }
+
+      extractBirthdayData(modal) {
+        const birthdayInput = modal.querySelector('#joy-birthday-input');
+
+        if (!birthdayInput || !birthdayInput.value) {
+          return null;
+        }
+
+        const dateValue = birthdayInput.value.trim();
+        const parts = dateValue.split('-');
+
+        if (parts.length !== 3) {
+          console.error('Invalid date format:', dateValue);
+          return null;
+        }
+
+        return {
+          month: parseInt(parts[1], 10),
+          day: parseInt(parts[2], 10)
+        };
+      }
+
+      async saveBirthdayToJoySDK(month, day) {
+        if (!this.isUpdateDOBAvailable()) {
+          throw new Error('Joy SDK updateDOB method not available');
+        }
+
+        const result = await window.joyInstance.updateDOB(month, day);
+
+        if (!result || result.status !== true) {
+          throw new Error('Failed to save birthday');
+        }
+
+        return result;
+      }
+
+      isUpdateDOBAvailable() {
+        return window.joyInstance && typeof window.joyInstance.updateDOB === 'function';
+      }
+
+      showBirthdaySuccessState(actionButton) {
+        if (!actionButton) return;
+
+        const savedText = this.getSectionSetting('modal_birthday_saved_text') || 'Saved!';
+        actionButton.innerHTML = `
+          <span style="display: inline-flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            ${savedText}
+          </span>
+        `;
+      }
+
+      async refreshCustomerData() {
+        if (!window.joyInstance) return;
+
+        try {
+          this.cachedCustomer = await window.joyInstance.customer();
+        } catch (error) {
+          console.warn('Could not refresh customer data:', error);
+        }
+      }
+
+      showBirthdayErrorState(actionButton, originalButtonText, error) {
+        console.error('Error saving birthday:', error);
+
+        if (!actionButton) return;
+
+        const failedText = this.getSectionSetting('modal_birthday_failed_text') || 'Failed to save';
+        actionButton.innerHTML = failedText;
+        actionButton.disabled = false;
+
+        setTimeout(() => {
+          actionButton.textContent = originalButtonText;
+        }, 2000);
+      }
+
+      async handleNewsletterAction(modal, program, actionButton, originalButtonText) {
+        const emailInput = modal.querySelector('#joy-email-input');
+        if (emailInput && emailInput.value) {
+          // Add SDK call for newsletter signup if available
+
+          // Show success state and keep modal open
+          if (actionButton) {
+            actionButton.innerHTML = `
+              <span style="display: inline-flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                ${this.getSectionSetting('modal_newsletter_success_text') || 'Subscribed!'}
+              </span>
+            `;
+          }
+          this.triggerEarningProgram(program);
+        }
+      }
+
+      async handleSocialEventAction(modal, program, actionButton, originalButtonText) {
+        try {
+          // Brief delay for loading state demonstration
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Show success state following the same pattern as other handlers
+          if (actionButton) {
+            actionButton.innerHTML = `
+              <span style="display: inline-flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Action Complete!
+              </span>
+            `;
+          }
+
+          // Open the social URL if available
+          if (program.urlAtLoyaltyPage) {
+            try {
+              // Open in a popup window for social actions
+              const width = 600;
+              const height = 500;
+              const left = (window.screen.width - width) / 2;
+              const top = (window.screen.height - height) / 2;
+
+              const popup = window.open(
+                program.urlAtLoyaltyPage,
+                'social_action',
+                `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+              );
+
+              // Focus the popup window
+              if (popup) {
+                popup.focus();
+              }
+            } catch (popupError) {
+            }
+          }
+
+          // Trigger the earning program (wrapped in try-catch to prevent blocking)
+          try {
+            this.triggerEarningProgram(program);
+          } catch (triggerError) {
+          }
+
+          // Close modal after showing success
+          setTimeout(() => {
+            try {
+              this.closeModal(modal);
+            } catch (closeError) {
+            }
+          }, 2000);
+
+        } catch (error) {
+          console.error('Error in handleSocialEventAction:', error);
+          // Reset button on error - let parent method handle disabled state
+          if (actionButton) {
+            actionButton.textContent = originalButtonText;
+          }
+        }
+      }
+
+      async handleReviewAction(modal, program, actionButton, originalButtonText) {
+        // Show success state and keep modal open
+        if (actionButton) {
+          actionButton.innerHTML = `
+            <span style="display: inline-flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              ${this.getSectionSetting('modal_review_success_text') || 'Completed!'}
+            </span>
+          `;
+        }
+        this.triggerEarningProgram(program);
+      }
+
+      async handleReferralAction(modal, program, actionButton, originalButtonText) {
+        // Show success state and keep modal open
+        if (actionButton) {
+          actionButton.innerHTML = `
+            <span style="display: inline-flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              ${this.getSectionSetting('modal_referral_success_text') || 'Shared!'}
+            </span>
+          `;
+        }
+        this.triggerEarningProgram(program);
+      }
+
+      async handleCustomProgramAction(modal, program, actionButton, originalButtonText) {
+        if (program.typeCustom && program.typeCustom.includes('form')) {
+          const customInput = modal.querySelector('#joy-custom-input');
+          if (customInput && customInput.value) {
+            // Handle custom form submission
+          }
+        }
+
+        // Show success state and keep modal open
+        if (actionButton) {
+          actionButton.innerHTML = `
+            <span style="display: inline-flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              ${this.getSectionSetting('modal_custom_success_text') || 'Submitted!'}
+            </span>
+          `;
+        }
+        this.triggerEarningProgram(program);
+      }
+
+      async handleLoginSignupAction(modal, program, actionButton, originalButtonText) {
+        // Check which button was clicked
+        const clickedButton = modal.querySelector('.joy-button-primary[data-action="signup"], .joy-button-secondary[data-action="login"]');
+
+        if (clickedButton) {
+          const action = clickedButton.getAttribute('data-action');
+
+          if (action === 'signup') {
+            window.location.href = '/account/register';
+          } else if (action === 'login') {
+            window.location.href = '/account/login';
+          }
+        }
+
+        this.closeModal(modal);
+      }
+
+      async triggerEarningProgram(program) {
+        if (window.joyInstance && typeof window.joyInstance.handleEarningProgram === 'function') {
+          try {
+            const result = await window.joyInstance.handleEarningProgram({program, customer: this.cachedCustomer});
+          } catch (error) {
+          }
+        }
+      }
+
+      setupModalFormValidation(modal, program) {
+        const actionButton = modal.querySelector('.joy-modal-button-action');
+        const inputs = modal.querySelectorAll('.joy-form-input, .joy-form-textarea');
+
+        if (inputs.length === 0) return;
+
+        // Don't set up validation if birthday already exists and is disabled
+        if (program.event === 'birthday' && this.cachedCustomer?.birthMonth && this.cachedCustomer?.birthday) {
+          // Button is already disabled via the modal HTML
+          return;
+        }
+
+        // Real-time validation
+        inputs.forEach(input => {
+          input.addEventListener('input', () => {
+            const isValid = this.validateModalForm(modal, program);
+            actionButton.disabled = !isValid;
+            actionButton.style.opacity = isValid ? '1' : '0.5';
+          });
+        });
+
+        // Set initial state
+        const isValid = this.validateModalForm(modal, program);
+        actionButton.disabled = !isValid;
+        actionButton.style.opacity = isValid ? '1' : '0.5';
+      }
+
+      validateModalForm(modal, program) {
+        if (program.event === 'birthday') {
+          return this.validateBirthdayInput(modal);
+        }
+
+        if (program.event === 'sign_up_newsletter') {
+          return this.validateEmailInput(modal);
+        }
+
+        if (program.event === 'custom_program') {
+          return this.validateCustomProgramInput(modal, program);
+        }
+
+        return true; // No validation needed for other program types
+      }
+
+      closeCustomModal() {
+        const modal = document.querySelector('.joy-custom-modal');
+        if (modal) {
+          modal.style.animation = 'joy-modal-fade-out 0.3s ease forwards';
+          setTimeout(() => modal.remove(), 300);
+        }
+      }
+
+      getProgramDescription(program) {
+        const pointSingular = window.AVADA_JOY?.settings?.pointSingular || 'point';
+        const pointPlural = window.AVADA_JOY?.settings?.pointPlural || 'points';
+
+        if (program.event === 'place_order' && program.earnBy === 'price') {
+          const pointText = program.earnPoint !== 1 ? pointPlural : pointSingular;
+          return `Earn ${program.earnPoint} ${pointText} for every $${program.rateMoney || '1'} spent`;
+        } else if (program.earnPoint) {
+          const pointText = program.earnPoint !== 1 ? pointPlural : pointSingular;
+          return `Earn ${program.earnPoint} ${pointText}`;
+        }
+        const defaultPointText = pointPlural;
+        return `Complete this action to earn ${defaultPointText}`;
+      }
+
+      getDefaultIcon(event) {
+        const iconMap = {
+          'place_order': '{{ "cash-dollar.svg" | asset_url }}',
+          'signup': '{{ "sign_up.svg" | asset_url }}',
+          'birthday': '{{ "birthday.svg" | asset_url }}',
+          'social_follow': '{{ "follow_instagram.svg" | asset_url }}',
+          'referral': '{{ "profile.svg" | asset_url }}',
+          'review': '{{ "write_review.svg" | asset_url }}'
+        };
+        return iconMap[event] || '{{ "earn.svg" | asset_url }}';
+      }
+
+      getFallbackEmoji(event) {
+        const emojiMap = {
+          'place_order': '🛒',
+          'signup': '✨',
+          'birthday': '🎂',
+          'social_follow': '📱',
+          'referral': '👥',
+          'review': '⭐'
+        };
+        return emojiMap[event] || '🎁';
+      }
+
+      showNoDataMessage(message) {
+        const noDataTitle = this.getSectionSetting('no_data_title') || 'No Programs Available';
+        this.innerHTML = `
+        <div class="joy-error-state">
+          <h3>${noDataTitle}</h3>
+          <p>${message}</p>
+        </div>
+      `;
+      }
+
+      getSectionSetting(key) {
+        // Convert kebab-case to camelCase for dataset access
+        const datasetKey = key.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+
+        // Get section settings from the section element
+        const sectionElement = document.querySelector(`[data-section-id="${this.sectionId}"]`);
+        if (sectionElement && sectionElement.dataset[datasetKey]) {
+          return sectionElement.dataset[datasetKey];
+        }
+
+        return null;
+      }
+
+      async handleModalAction(modal, program, modalHandler) {
+        // Validate form before submission using registry validator
+        if (modalHandler.validate && !modalHandler.validate(modal, program)) {
+          return;
+        }
+
+        // Get the action button and add loading state
+        const actionButton = modal.querySelector('.joy-modal-button-action');
+        const originalButtonText = actionButton ? actionButton.textContent : '';
+
+        if (actionButton) {
+          actionButton.disabled = true;
+          actionButton.innerHTML = `
+          <span style="display: inline-flex; align-items: center; gap: 8px;">
+            <svg class="joy-spinner" width="16" height="16" viewBox="0 0 24 24" style="animation: joy-spin 1s linear infinite;">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4" stroke-dashoffset="10.5"></circle>
+            </svg>
+            Processing...
+          </span>
+        `;
+        }
+
+        try {
+          // Call the registered handler's action
+          if (modalHandler.handleAction) {
+            await modalHandler.handleAction(modal, program, actionButton, originalButtonText);
+          } else {
+            this.closeModal(modal);
+          }
+        } catch (error) {
+          console.error('Error in handleModalAction:', error);
+          // Reset button on error
+          const actionButton = modal.querySelector('.joy-modal-button-action');
+          if (actionButton) {
+            actionButton.textContent = originalButtonText;
+            actionButton.disabled = false;
+          }
+        }
+      }
+
+      // Validation functions
+      validateBirthdayInput(modal) {
+        const birthdayInput = modal.querySelector('#joy-birthday-input');
+        if (!birthdayInput || !birthdayInput.value) return false;
+
+        // Validate YYYY-MM-DD format (HTML date input automatically provides valid format)
+        const value = birthdayInput.value.trim();
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+        if (!dateRegex.test(value)) return false;
+
+        // Additional validation: try to create a valid date
+        const date = new Date(value);
+        return date instanceof Date && !isNaN(date);
+      }
+
+      validateEmailInput(modal) {
+        const emailInput = modal.querySelector('#joy-email-input');
+        return emailInput && emailInput.value && emailInput.checkValidity();
+      }
+
+      validateCustomProgramInput(modal, program) {
+        if (program.typeCustom && program.typeCustom.includes('form')) {
+          const customInput = modal.querySelector('#joy-custom-input');
+          return customInput && customInput.value.trim().length > 0;
+        }
+        return true;
+      }
+
+      // Modal validation setup handlers
+      setupValidation(modal, program) {
+        const actionButton = modal.querySelector('.joy-modal-button-action');
+        const inputs = modal.querySelectorAll('.joy-form-input');
+
+        // Don't set up validation if birthday already exists and is disabled
+        if (program && program.event === 'birthday' && this.cachedCustomer?.birthMonth && this.cachedCustomer?.birthday) {
+          return;
+        }
+
+        if (inputs.length === 0) return;
+
+        inputs.forEach(input => {
+          input.addEventListener('input', () => {
+            let isValid = true;
+            if (program && program.event === 'birthday') {
+              isValid = this.validateBirthdayInput(modal);
+            } else if (program && program.event === 'sign_up_newsletter') {
+              isValid = this.validateEmailInput(modal);
+            } else if (program && program.event === 'custom_program') {
+              isValid = this.validateCustomProgramInput(modal, program);
+            }
+            actionButton.disabled = !isValid;
+            actionButton.style.opacity = isValid ? '1' : '0.5';
+          });
+        });
+
+        // Set initial state
+        let isValid = true;
+        if (program && program.event === 'birthday') {
+          isValid = this.validateBirthdayInput(modal);
+        } else if (program && program.event === 'sign_up_newsletter') {
+          isValid = this.validateEmailInput(modal);
+        } else if (program && program.event === 'custom_program') {
+          isValid = this.validateCustomProgramInput(modal, program);
+        }
+        actionButton.disabled = !isValid;
+        actionButton.style.opacity = isValid ? '1' : '0.5';
+      }
+    });
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Joy: Custom Way to Earn",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_header",
+      "label": "Show Header",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Ways to earn"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle"
+    },
+    {
+      "type": "select",
+      "id": "header_alignment",
+      "label": "Header Alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "header",
+      "content": "Banner Image"
+    },
+    {
+      "type": "image_picker",
+      "id": "banner_image",
+      "label": "Banner Image",
+      "info": "Recommended size: 600x600px for square aspect ratio"
+    },
+    {
+      "type": "range",
+      "id": "banner_width",
+      "min": 300,
+      "max": 500,
+      "step": 20,
+      "unit": "px",
+      "label": "Banner Width",
+      "default": 420
+    },
+    {
+      "type": "range",
+      "id": "banner_height",
+      "min": 300,
+      "max": 600,
+      "step": 20,
+      "unit": "px",
+      "label": "Banner Height",
+      "default": 440
+    },
+    {
+      "type": "range",
+      "id": "banner_max_height",
+      "min": 400,
+      "max": 700,
+      "step": 20,
+      "unit": "px",
+      "label": "Banner Max Height",
+      "default": 500
+    },
+    {
+      "type": "range",
+      "id": "banner_border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Banner Border Radius",
+      "default": 8
+    },
+    {
+      "type": "select",
+      "id": "banner_image_fit",
+      "label": "Banner Image Fit",
+      "options": [
+        {
+          "value": "cover",
+          "label": "Cover (fill container)"
+        },
+        {
+          "value": "contain",
+          "label": "Contain (fit within container)"
+        },
+        {
+          "value": "fill",
+          "label": "Fill (stretch to fit)"
+        }
+      ],
+      "default": "cover"
+    },
+    {
+      "type": "select",
+      "id": "banner_image_position",
+      "label": "Banner Image Position",
+      "options": [
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "top",
+          "label": "Top"
+        },
+        {
+          "value": "bottom",
+          "label": "Bottom"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "header",
+      "content": "Banner Fallback (No Image)"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_banner_fallback",
+      "label": "Show Banner Area When No Image",
+      "default": false,
+      "info": "Display banner area with gradient when no banner image is selected"
+    },
+    {
+      "type": "color",
+      "id": "banner_gradient_start",
+      "label": "Gradient Start Color",
+      "default": "#F5F1EB"
+    },
+    {
+      "type": "color",
+      "id": "banner_gradient_end",
+      "label": "Gradient End Color",
+      "default": "#E8DDD4"
+    },
+    {
+      "type": "select",
+      "id": "banner_gradient_direction",
+      "label": "Gradient Direction",
+      "options": [
+        {
+          "value": "135deg",
+          "label": "Diagonal (Top-left to Bottom-right)"
+        },
+        {
+          "value": "90deg",
+          "label": "Vertical (Top to Bottom)"
+        },
+        {
+          "value": "0deg",
+          "label": "Horizontal (Left to Right)"
+        },
+        {
+          "value": "45deg",
+          "label": "Diagonal (Bottom-left to Top-right)"
+        }
+      ],
+      "default": "135deg"
+    },
+    {
+      "type": "color",
+      "id": "banner_text_color",
+      "label": "Placeholder Text Color",
+      "default": "#666666"
+    },
+    {
+      "type": "range",
+      "id": "banner_text_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Placeholder Text Size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "banner_padding",
+      "min": 16,
+      "max": 40,
+      "step": 4,
+      "unit": "px",
+      "label": "Banner Padding",
+      "default": 28
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "columns_desktop",
+      "label": "Desktop Columns",
+      "options": [
+        {
+          "value": "1",
+          "label": "1 Column"
+        },
+        {
+          "value": "2",
+          "label": "2 Columns"
+        },
+        {
+          "value": "3",
+          "label": "3 Columns"
+        }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "label": "Mobile Columns (with banner)",
+      "options": [
+        {
+          "value": "1",
+          "label": "1 Column"
+        },
+        {
+          "value": "2",
+          "label": "2 Columns"
+        }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "select",
+      "id": "columns_desktop_no_banner",
+      "label": "Desktop Columns (no banner)",
+      "options": [
+        {
+          "value": "2",
+          "label": "2 Columns"
+        },
+        {
+          "value": "3",
+          "label": "3 Columns"
+        },
+        {
+          "value": "4",
+          "label": "4 Columns"
+        }
+      ],
+      "default": "3"
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile_no_banner",
+      "label": "Mobile Columns (no banner)",
+      "options": [
+        {
+          "value": "1",
+          "label": "1 Column"
+        },
+        {
+          "value": "2",
+          "label": "2 Columns"
+        }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "min": 600,
+      "max": 1600,
+      "step": 100,
+      "unit": "px",
+      "label": "Maximum Width",
+      "default": 1200
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "min": 20,
+      "max": 100,
+      "step": 10,
+      "unit": "px",
+      "label": "Section Padding",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "card_gap",
+      "min": 8,
+      "max": 48,
+      "step": 4,
+      "unit": "px",
+      "label": "Card Gap",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "card_gap_mobile",
+      "min": 8,
+      "max": 32,
+      "step": 4,
+      "unit": "px",
+      "label": "Card Gap Mobile",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "banner_height_mobile",
+      "min": 120,
+      "max": 300,
+      "step": 20,
+      "unit": "px",
+      "label": "Banner Height Mobile",
+      "default": 200
+    },
+    {
+      "type": "range",
+      "id": "banner_max_height_mobile",
+      "min": 200,
+      "max": 400,
+      "step": 20,
+      "unit": "px",
+      "label": "Banner Max Height Mobile",
+      "default": 280
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "min": 20,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Title Size",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "program_name_size",
+      "min": 16,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Program Name Size",
+      "default": 18
+    },
+    {
+      "type": "select",
+      "id": "program_name_weight",
+      "label": "Program Name Weight",
+      "options": [
+        {
+          "value": "400",
+          "label": "Normal"
+        },
+        {
+          "value": "500",
+          "label": "Medium"
+        },
+        {
+          "value": "600",
+          "label": "Semi Bold"
+        },
+        {
+          "value": "700",
+          "label": "Bold"
+        }
+      ],
+      "default": "500"
+    },
+    {
+      "type": "range",
+      "id": "program_description_size",
+      "min": 13,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Program Description Size",
+      "default": 15
+    },
+    {
+      "type": "header",
+      "content": "Card Styling"
+    },
+    {
+      "type": "color",
+      "id": "card_background",
+      "label": "Card Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "card_hover_background",
+      "label": "Card Hover Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "card_border_color",
+      "label": "Card Border Color",
+      "default": "#E5E7EB"
+    },
+    {
+      "type": "color",
+      "id": "card_hover_border_color",
+      "label": "Card Hover Border Color",
+      "default": "#6B7280"
+    },
+    {
+      "type": "range",
+      "id": "card_border_width",
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "unit": "px",
+      "label": "Card Border Width",
+      "default": 1
+    },
+    {
+      "type": "range",
+      "id": "card_border_radius",
+      "min": 0,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Card Border Radius",
+      "default": 10
+    },
+    {
+      "type": "range",
+      "id": "card_padding",
+      "min": 12,
+      "max": 32,
+      "step": 4,
+      "unit": "px",
+      "label": "Card Padding",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "card_padding_mobile",
+      "min": 12,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Card Padding Mobile",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "card_gap_internal",
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Card Internal Gap",
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Hover Effects"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_hover_effects",
+      "label": "Enable Hover Effects",
+      "default": true,
+      "info": "Turn on/off all card hover animations"
+    },
+    {
+      "type": "select",
+      "id": "hover_animation_style",
+      "label": "Hover Animation Style",
+      "options": [
+        {
+          "value": "subtle",
+          "label": "Subtle (slight lift)"
+        },
+        {
+          "value": "enhanced",
+          "label": "Enhanced (lift + scale)"
+        },
+        {
+          "value": "dramatic",
+          "label": "Dramatic (high lift + effects)"
+        }
+      ],
+      "default": "subtle",
+      "info": "Choose the intensity of hover animations"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_shimmer_effect",
+      "label": "Enable Shimmer Effect",
+      "default": false,
+      "info": "Add a light sweep effect on hover"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_icon_rotation",
+      "label": "Enable Icon Rotation",
+      "default": false,
+      "info": "Icons rotate slightly on hover"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_text_slide",
+      "label": "Enable Text Slide",
+      "default": false,
+      "info": "Text slides slightly on hover"
+    },
+    {
+      "type": "range",
+      "id": "hover_lift_distance",
+      "min": 2,
+      "max": 16,
+      "step": 2,
+      "unit": "px",
+      "label": "Hover Lift Distance",
+      "default": 4,
+      "info": "How far the card lifts on hover"
+    },
+    {
+      "type": "range",
+      "id": "hover_scale_amount",
+      "min": 100,
+      "max": 110,
+      "step": 1,
+      "unit": "%",
+      "label": "Hover Scale Amount",
+      "default": 100,
+      "info": "Card scaling on hover (100% = no scale)"
+    },
+    {
+      "type": "header",
+      "content": "Icon Styling"
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "min": 32,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Icon Container Size",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "icon_image_size",
+      "min": 16,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "label": "Icon Image Size",
+      "default": 50
+    },
+    {
+      "type": "color",
+      "id": "icon_background",
+      "label": "Icon Background",
+      "default": "#F5F5F5"
+    },
+    {
+      "type": "range",
+      "id": "icon_border_radius",
+      "min": 0,
+      "max": 100,
+      "step": 2,
+      "unit": "px",
+      "label": "Icon Border Radius",
+      "default": 8
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Primary Color",
+      "default": "#6B7280"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Section Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Title Color",
+      "default": "#2C2C2C"
+    },
+    {
+      "type": "color",
+      "id": "subtitle_color",
+      "label": "Subtitle Color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Card Title Color",
+      "default": "#2C2C2C"
+    },
+    {
+      "type": "color",
+      "id": "description_color",
+      "label": "Card Description Color",
+      "default": "#666666"
+    },
+    {
+      "type": "header",
+      "content": "Modal Text Settings"
+    },
+    {
+      "type": "text",
+      "id": "modal_birthday_label",
+      "label": "Birthday Label",
+      "default": "Enter your birthday:",
+      "info": "Label shown above the birthday input field"
+    },
+    {
+      "type": "text",
+      "id": "modal_birthday_placeholder",
+      "label": "Birthday Placeholder",
+      "default": "dd/mm",
+      "info": "Placeholder text for the birthday input field"
+    },
+    {
+      "type": "text",
+      "id": "modal_birthday_save_text",
+      "label": "Birthday Save Button Text",
+      "default": "Save birthday",
+      "info": "Text shown on the save button for new birthdays"
+    },
+    {
+      "type": "text",
+      "id": "modal_birthday_saved_text",
+      "label": "Birthday Saved Button Text",
+      "default": "Birthday saved",
+      "info": "Text shown on the button when birthday is already saved"
+    },
+    {
+      "type": "text",
+      "id": "modal_birthday_saved_message",
+      "label": "Birthday Saved Message",
+      "default": "Your birthday is already saved!",
+      "info": "Message shown when birthday is already saved"
+    },
+    {
+      "type": "text",
+      "id": "modal_newsletter_label",
+      "label": "Newsletter Email Label",
+      "default": "Email address:",
+      "info": "Label for newsletter email input"
+    },
+    {
+      "type": "text",
+      "id": "modal_newsletter_placeholder",
+      "label": "Newsletter Email Placeholder",
+      "default": "your@email.com",
+      "info": "Placeholder for newsletter email input"
+    },
+    {
+      "type": "text",
+      "id": "modal_newsletter_help",
+      "label": "Newsletter Help Text",
+      "default": "Subscribe to get exclusive offers and updates",
+      "info": "Help text shown below newsletter email input"
+    },
+    {
+      "type": "text",
+      "id": "modal_newsletter_button",
+      "label": "Newsletter Button Text",
+      "default": "Subscribe",
+      "info": "Text for newsletter subscribe button"
+    },
+    {
+      "type": "text",
+      "id": "modal_newsletter_success",
+      "label": "Newsletter Success Text",
+      "default": "Subscribed!",
+      "info": "Success message for newsletter subscription"
+    },
+    {
+      "type": "text",
+      "id": "modal_review_description",
+      "label": "Review Modal Description",
+      "default": "Choose a product to review and earn points:",
+      "info": "Description text in review modal"
+    },
+    {
+      "type": "text",
+      "id": "modal_review_button_text",
+      "label": "Review Button Text",
+      "default": "Review Your Recent Purchase",
+      "info": "Text for review button in modal"
+    },
+    {
+      "type": "text",
+      "id": "modal_review_help",
+      "label": "Review Help Text",
+      "default": "You'll be redirected to leave your review",
+      "info": "Help text shown in review modal"
+    },
+    {
+      "type": "text",
+      "id": "modal_review_action",
+      "label": "Review Action Button",
+      "default": "Write Review",
+      "info": "Text for review action button"
+    },
+    {
+      "type": "text",
+      "id": "modal_review_success",
+      "label": "Review Success Text",
+      "default": "Completed!",
+      "info": "Success message for review completion"
+    },
+    {
+      "type": "text",
+      "id": "modal_referral_description",
+      "label": "Referral Modal Description",
+      "default": "Share your referral link with friends!",
+      "info": "Description text in referral modal"
+    },
+    {
+      "type": "text",
+      "id": "modal_referral_copy_button",
+      "label": "Referral Copy Button",
+      "default": "Copy Link",
+      "info": "Text for copy link button"
+    },
+    {
+      "type": "text",
+      "id": "modal_referral_help",
+      "label": "Referral Help Text",
+      "default": "When your friends sign up using your link, you both earn points!",
+      "info": "Help text shown in referral modal"
+    },
+    {
+      "type": "text",
+      "id": "modal_referral_action",
+      "label": "Referral Action Button",
+      "default": "Share Now",
+      "info": "Text for referral action button"
+    },
+    {
+      "type": "text",
+      "id": "modal_referral_success",
+      "label": "Referral Success Text",
+      "default": "Shared!",
+      "info": "Success message for referral sharing"
+    },
+    {
+      "type": "text",
+      "id": "modal_custom_form_label",
+      "label": "Custom Form Default Label",
+      "default": "Enter your information:",
+      "info": "Default label for custom program forms"
+    },
+    {
+      "type": "text",
+      "id": "modal_custom_form_help",
+      "label": "Custom Form Default Help",
+      "default": "Please provide the requested information",
+      "info": "Default help text for custom program forms"
+    },
+    {
+      "type": "text",
+      "id": "modal_custom_submit",
+      "label": "Custom Form Submit Button",
+      "default": "Submit",
+      "info": "Text for custom form submit button"
+    },
+    {
+      "type": "text",
+      "id": "modal_custom_continue",
+      "label": "Custom Program Continue Button",
+      "default": "Continue",
+      "info": "Text for custom program continue button"
+    },
+    {
+      "type": "text",
+      "id": "modal_custom_success",
+      "label": "Custom Program Success Text",
+      "default": "Submitted!",
+      "info": "Success message for custom program completion"
+    },
+    {
+      "type": "text",
+      "id": "modal_cancel_text",
+      "label": "Cancel Button Text",
+      "default": "Cancel",
+      "info": "Text shown on the cancel button"
+    },
+    {
+      "type": "text",
+      "id": "modal_processing_text",
+      "label": "Processing Text",
+      "default": "Processing...",
+      "info": "Text shown when processing an action"
+    },
+    {
+      "type": "text",
+      "id": "modal_saved_text",
+      "label": "Generic Saved Text",
+      "default": "Saved!",
+      "info": "Generic success text for saved actions"
+    },
+    {
+      "type": "header",
+      "content": "Login/Signup Modal Settings"
+    },
+    {
+      "type": "text",
+      "id": "modal_login_signup_title",
+      "label": "Login/Signup Modal Title",
+      "default": "Join and Earn Rewards",
+      "info": "Title shown in the login/signup modal"
+    },
+    {
+      "type": "text",
+      "id": "modal_login_signup_description",
+      "label": "Login/Signup Modal Description",
+      "default": "Earn points and turn these into rewards!",
+      "info": "Description shown in the login/signup modal"
+    },
+    {
+      "type": "text",
+      "id": "modal_signup_button_text",
+      "label": "Signup Button Text",
+      "default": "Start Earning",
+      "info": "Text shown on the signup button"
+    },
+    {
+      "type": "text",
+      "id": "modal_login_text",
+      "label": "Login Prompt Text",
+      "default": "Already a member?",
+      "info": "Text shown before the login button"
+    },
+    {
+      "type": "text",
+      "id": "modal_login_button_text",
+      "label": "Login Button Text",
+      "default": "Sign In",
+      "info": "Text shown on the login button"
+    },
+    {
+      "type": "text",
+      "id": "modal_close_text",
+      "label": "Close Button Text",
+      "default": "Close",
+      "info": "Text shown on the close button"
+    },
+    {
+      "type": "select",
+      "id": "modal_size",
+      "label": "Modal Size",
+      "options": [
+        {
+          "value": "small",
+          "label": "Small (400px)"
+        },
+        {
+          "value": "medium",
+          "label": "Medium (500px)"
+        },
+        {
+          "value": "large",
+          "label": "Large (650px)"
+        }
+      ],
+      "default": "medium",
+      "info": "Choose the size of modal windows"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Joy Custom Way to Earn"
+    }
+  ]
+}
+{% endschema %}

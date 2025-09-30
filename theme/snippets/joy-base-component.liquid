@@ -1,0 +1,587 @@
+{% comment %}
+  Joy Base Component System
+  Provides foundational classes and utilities for all Joy components
+  Follows Avada coding standards and provides maximum flexibility
+{% endcomment %}
+
+<script>
+/**
+ * Joy Base Component Architecture
+ * Provides common functionality and standards for all Joy components
+ * @namespace JoyComponents
+ */
+window.JoyComponents = window.JoyComponents || {};
+
+/**
+ * Base class for all Joy components
+ * Provides common patterns, error handling, and SDK integration
+ */
+class JoyBaseComponent extends HTMLElement {
+  // Static constants for component behavior
+  static SDK_READY_EVENT = 'joy:ready';
+  static INIT_TIMEOUT = 10000; // 10 second timeout for initialization
+  static ERROR_RETRY_ATTEMPTS = 3;
+  static ERROR_RETRY_DELAY = 1000;
+
+  // Component state constants
+  static STATES = {
+    INITIAL: 'initial',
+    LOADING: 'loading',
+    READY: 'ready',
+    ERROR: 'error',
+    EMPTY: 'empty'
+  };
+
+  // Common CSS classes following BEM methodology
+  static CSS_CLASSES = {
+    CONTAINER: 'joy-component',
+    LOADING: 'joy-component--loading',
+    ERROR: 'joy-component--error',
+    EMPTY: 'joy-component--empty',
+    CARD: 'joy-component__card',
+    HEADER: 'joy-component__header',
+    CONTENT: 'joy-component__content',
+    ACTIONS: 'joy-component__actions'
+  };
+
+  constructor() {
+    super();
+
+    // Core component properties
+    this.state = JoyBaseComponent.STATES.INITIAL;
+    this.sectionId = this.dataset.sectionId || this.generateId();
+    this.customerId = this.dataset.customerId;
+    this.isInitialized = false;
+    this.retryCount = 0;
+    this.initTimeout = null;
+    this.cachedData = new Map();
+
+    // Event handler bindings
+    this.handleJoyReady = this.handleJoyReady.bind(this);
+    this.handleError = this.handleError.bind(this);
+    this.cleanup = this.cleanup.bind(this);
+  }
+
+  /**
+   * Lifecycle method called when element is added to DOM
+   */
+  connectedCallback() {
+    this.log('Component connected', { sectionId: this.sectionId });
+    this.setState(JoyBaseComponent.STATES.LOADING);
+    this.initializeComponent();
+  }
+
+  /**
+   * Lifecycle method called when element is removed from DOM
+   */
+  disconnectedCallback() {
+    this.log('Component disconnected');
+    this.cleanup();
+  }
+
+  /**
+   * Initialize the component with proper error handling and retry logic
+   */
+  async initializeComponent() {
+    try {
+      // Prevent duplicate initialization
+      if (this.isInitialized) {
+        this.warn('Component already initialized, skipping');
+        return;
+      }
+
+      // Set initialization timeout
+      this.initTimeout = setTimeout(() => {
+        this.handleInitTimeout();
+      }, JoyBaseComponent.INIT_TIMEOUT);
+
+      // Listen for Joy SDK ready event
+      window.addEventListener(JoyBaseComponent.SDK_READY_EVENT, this.handleJoyReady);
+
+      // Try immediate initialization if SDK already loaded
+      if (this.isJoySDKReady()) {
+        await this.handleJoyReady();
+      }
+
+    } catch (error) {
+      this.handleError('Failed to initialize component', error);
+    }
+  }
+
+  /**
+   * Handle Joy SDK ready event
+   */
+  async handleJoyReady() {
+    try {
+      if (this.isInitialized) return;
+
+      this.log('Joy SDK ready, initializing component');
+      clearTimeout(this.initTimeout);
+
+      // Validate Joy SDK instance
+      const joyInstance = this.getJoyInstance();
+      if (!joyInstance) {
+        throw new Error('Joy SDK instance not available');
+      }
+
+      // Load customer data if needed
+      await this.loadCustomerData(joyInstance);
+
+      // Call component-specific initialization
+      await this.onJoyReady(joyInstance);
+
+      this.isInitialized = true;
+      this.setState(JoyBaseComponent.STATES.READY);
+      this.log('Component initialized successfully');
+
+    } catch (error) {
+      this.handleError('Failed to handle Joy ready event', error);
+    }
+  }
+
+  /**
+   * Component-specific initialization logic (to be overridden)
+   * @param {Object} joyInstance - The Joy SDK instance
+   */
+  async onJoyReady(joyInstance) {
+    // Override in child classes
+    throw new Error('onJoyReady method must be implemented by child classes');
+  }
+
+  /**
+   * Check if Joy SDK is ready and available
+   * @returns {boolean} True if Joy SDK is ready
+   */
+  isJoySDKReady() {
+    return Boolean(window.joyInstance && typeof window.joyInstance === 'object');
+  }
+
+  /**
+   * Get Joy SDK instance with validation
+   * @returns {Object|null} Joy SDK instance or null if not available
+   */
+  getJoyInstance() {
+    if (!window.joyInstance) {
+      this.warn('Joy SDK instance not found');
+      return null;
+    }
+
+    if (typeof window.joyInstance !== 'object') {
+      this.warn('Joy SDK instance is not an object');
+      return null;
+    }
+
+    return window.joyInstance;
+  }
+
+  /**
+   * Load customer data with caching
+   * @param {Object} joyInstance - Joy SDK instance
+   */
+  async loadCustomerData(joyInstance) {
+    if (!this.customerId) {
+      this.log('No customer ID provided, skipping customer data load');
+      return;
+    }
+
+    const cacheKey = `customer_${this.customerId}`;
+
+    // Return cached data if available
+    if (this.cachedData.has(cacheKey)) {
+      this.log('Using cached customer data');
+      return this.cachedData.get(cacheKey);
+    }
+
+    try {
+      if (typeof joyInstance.customer === 'function') {
+        const customerData = await joyInstance.customer();
+        this.cachedData.set(cacheKey, customerData);
+        this.log('Customer data loaded and cached', { customerId: this.customerId });
+        return customerData;
+      } else {
+        this.warn('Joy SDK customer method not available');
+        return null;
+      }
+    } catch (error) {
+      this.error('Failed to load customer data', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get cached customer data
+   * @returns {Object|null} Cached customer data or null
+   */
+  getCustomerData() {
+    const cacheKey = `customer_${this.customerId}`;
+    return this.cachedData.get(cacheKey) || null;
+  }
+
+  /**
+   * Get customer points with fallback logic
+   * @returns {number} Customer points or 0
+   */
+  getCustomerPoints() {
+    try {
+      // Try cached customer data first
+      const customerData = this.getCustomerData();
+      if (customerData && customerData.point) {
+        return parseInt(customerData.point) || 0;
+      }
+
+      // Try global Joy data
+      if (window.AVADA_JOY?.points) {
+        return parseInt(window.AVADA_JOY.points) || 0;
+      }
+
+      // Try Joy instance customer data
+      const joyInstance = this.getJoyInstance();
+      if (joyInstance?.customer?.point) {
+        return parseInt(joyInstance.customer.point) || 0;
+      }
+
+      return 0;
+    } catch (error) {
+      this.error('Failed to get customer points', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Handle initialization timeout
+   */
+  handleInitTimeout() {
+    this.warn('Component initialization timed out');
+    this.setState(JoyBaseComponent.STATES.ERROR);
+    this.renderErrorState('Initialization timeout. Please refresh the page.');
+  }
+
+  /**
+   * Set component state with state change event
+   * @param {string} newState - The new state
+   */
+  setState(newState) {
+    const oldState = this.state;
+    this.state = newState;
+
+    // Update CSS classes
+    this.updateStateClasses(oldState, newState);
+
+    // Emit state change event
+    this.dispatchEvent(new CustomEvent('statechange', {
+      detail: { oldState, newState },
+      bubbles: true
+    }));
+
+    this.log('State changed', { from: oldState, to: newState });
+  }
+
+  /**
+   * Update CSS classes based on state
+   * @param {string} oldState - Previous state
+   * @param {string} newState - New state
+   */
+  updateStateClasses(oldState, newState) {
+    // Remove old state class
+    if (oldState) {
+      this.classList.remove(`${JoyBaseComponent.CSS_CLASSES.CONTAINER}--${oldState}`);
+    }
+
+    // Add new state class
+    this.classList.add(JoyBaseComponent.CSS_CLASSES.CONTAINER);
+    this.classList.add(`${JoyBaseComponent.CSS_CLASSES.CONTAINER}--${newState}`);
+  }
+
+  /**
+   * Handle errors with retry logic
+   * @param {string} message - Error message
+   * @param {Error} error - Error object
+   */
+  handleError(message, error) {
+    this.error(message, error);
+
+    // Implement retry logic for recoverable errors
+    if (this.retryCount < JoyBaseComponent.ERROR_RETRY_ATTEMPTS) {
+      this.retryCount++;
+      this.warn(`Retrying initialization (attempt ${this.retryCount})`);
+
+      setTimeout(() => {
+        this.isInitialized = false;
+        this.initializeComponent();
+      }, JoyBaseComponent.ERROR_RETRY_DELAY * this.retryCount);
+
+      return;
+    }
+
+    // Set error state and render error UI
+    this.setState(JoyBaseComponent.STATES.ERROR);
+    this.renderErrorState(message);
+  }
+
+  /**
+   * Render error state UI
+   * @param {string} message - Error message to display
+   */
+  renderErrorState(message) {
+    this.innerHTML = `
+      <div class="${JoyBaseComponent.CSS_CLASSES.CONTAINER}__error">
+        <div class="${JoyBaseComponent.CSS_CLASSES.CONTAINER}__error-content">
+          <h3>Unable to load content</h3>
+          <p>${this.escapeHtml(message)}</p>
+          <button class="${JoyBaseComponent.CSS_CLASSES.CONTAINER}__retry-button" onclick="this.closest('.${JoyBaseComponent.CSS_CLASSES.CONTAINER}').retry()">
+            Try Again
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render empty state UI
+   * @param {string} message - Empty state message
+   */
+  renderEmptyState(message = 'No content available') {
+    this.setState(JoyBaseComponent.STATES.EMPTY);
+    this.innerHTML = `
+      <div class="${JoyBaseComponent.CSS_CLASSES.CONTAINER}__empty">
+        <div class="${JoyBaseComponent.CSS_CLASSES.CONTAINER}__empty-content">
+          <p>${this.escapeHtml(message)}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Retry component initialization
+   */
+  retry() {
+    this.log('Retrying component initialization');
+    this.retryCount = 0;
+    this.isInitialized = false;
+    this.setState(JoyBaseComponent.STATES.LOADING);
+    this.initializeComponent();
+  }
+
+  /**
+   * Clean up component resources
+   */
+  cleanup() {
+    if (this.initTimeout) {
+      clearTimeout(this.initTimeout);
+      this.initTimeout = null;
+    }
+
+    window.removeEventListener(JoyBaseComponent.SDK_READY_EVENT, this.handleJoyReady);
+    this.cachedData.clear();
+  }
+
+  /**
+   * Get section setting from data attributes with fallback
+   * @param {string} setting - Setting name
+   * @param {*} fallback - Fallback value
+   * @returns {*} Setting value or fallback
+   */
+  getSectionSetting(setting, fallback = null) {
+    const dataAttr = this.dataset[this.camelCase(`modal-${setting}`)] ||
+                     this.dataset[this.camelCase(setting)];
+    return dataAttr !== undefined ? dataAttr : fallback;
+  }
+
+  /**
+   * Generate unique component ID
+   * @returns {string} Unique ID
+   */
+  generateId() {
+    return `joy-component-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Convert kebab-case to camelCase
+   * @param {string} str - String to convert
+   * @returns {string} camelCase string
+   */
+  camelCase(str) {
+    return str.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+  }
+
+  /**
+   * Escape HTML to prevent XSS
+   * @param {string} text - Text to escape
+   * @returns {string} Escaped text
+   */
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  /**
+   * Format points text with proper pluralization
+   * @param {number} points - Number of points
+   * @returns {string} Formatted points text
+   */
+  formatPointsText(points) {
+    const terminology = this.getPointTerminology();
+    const text = points === 1 ? terminology.singular : terminology.plural;
+    return `${points} ${text}`;
+  }
+
+  /**
+   * Get point terminology from global settings
+   * @returns {Object} Point terminology object
+   */
+  getPointTerminology() {
+    return {
+      singular: window.AVADA_JOY?.settings?.pointSingular || 'point',
+      plural: window.AVADA_JOY?.settings?.pointPlural || 'points'
+    };
+  }
+
+  /**
+   * Get fallback emoji for program types
+   * @param {string} programType - Program type/event
+   * @returns {string} Emoji character
+   */
+  getFallbackEmoji(programType) {
+    const emojiMap = {
+      'signup': '👋',
+      'birthday': '🎂',
+      'review': '⭐',
+      'social_share': '📱',
+      'referral': '👥',
+      'purchase': '🛒',
+      'newsletter': '📧',
+      'instagram_follow': '📸',
+      'facebook_like': '👍',
+      'twitter_follow': '🐦',
+      'discount': '💰',
+      'free_shipping': '🚚',
+      'gift_card': '🎁',
+      'product_discount': '🏷️',
+      'custom_reward': '⭐'
+    };
+    return emojiMap[programType] || '🎁';
+  }
+
+  /**
+   * Logging methods with proper formatting
+   */
+  log(message, data = null) {
+    console.log(`[Joy:${this.constructor.name}] ${message}`, data || '');
+  }
+
+  warn(message, data = null) {
+    console.warn(`[Joy:${this.constructor.name}] ${message}`, data || '');
+  }
+
+  error(message, error = null) {
+    console.error(`[Joy:${this.constructor.name}] ${message}`, error || '');
+  }
+}
+
+// Export to global namespace
+window.JoyComponents.BaseComponent = JoyBaseComponent;
+</script>
+
+<style>
+  /* Base component styles using CSS custom properties for flexibility */
+  .joy-component {
+    --joy-primary-color: #D4A574;
+    --joy-primary-hover: #B89550;
+    --joy-text-primary: #111827;
+    --joy-text-secondary: #6B7280;
+    --joy-background: #FFFFFF;
+    --joy-border-color: #E5E7EB;
+    --joy-border-radius: 12px;
+    --joy-spacing-xs: 4px;
+    --joy-spacing-sm: 8px;
+    --joy-spacing-md: 16px;
+    --joy-spacing-lg: 24px;
+    --joy-spacing-xl: 32px;
+    --joy-transition: all 0.15s ease;
+
+    font-family: inherit;
+    color: var(--joy-text-primary);
+  }
+
+  /* State-based styling */
+  .joy-component--loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .joy-component--error {
+    border: 1px solid #FCA5A5;
+    background-color: #FEF2F2;
+    border-radius: var(--joy-border-radius);
+  }
+
+  .joy-component--empty {
+    opacity: 0.6;
+  }
+
+  /* Error state styling */
+  .joy-component__error {
+    padding: var(--joy-spacing-lg);
+    text-align: center;
+    color: #DC2626;
+  }
+
+  .joy-component__error-content h3 {
+    margin: 0 0 var(--joy-spacing-sm) 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .joy-component__error-content p {
+    margin: 0 0 var(--joy-spacing-md) 0;
+    font-size: 14px;
+    color: #7F1D1D;
+  }
+
+  .joy-component__retry-button {
+    background: #DC2626;
+    color: white;
+    border: none;
+    padding: var(--joy-spacing-sm) var(--joy-spacing-md);
+    border-radius: calc(var(--joy-border-radius) / 2);
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--joy-transition);
+  }
+
+  .joy-component__retry-button:hover {
+    background: #B91C1C;
+  }
+
+  /* Empty state styling */
+  .joy-component__empty {
+    padding: var(--joy-spacing-xl);
+    text-align: center;
+    color: var(--joy-text-secondary);
+  }
+
+  .joy-component__empty-content p {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  /* Loading animation */
+  @keyframes joy-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .joy-component--loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    animation: joy-pulse 1.5s ease-in-out infinite;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+</style>

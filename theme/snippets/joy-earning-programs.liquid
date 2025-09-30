@@ -1,0 +1,787 @@
+{% comment %}
+  Joy Earning Programs Component
+  High-standard, modular component for displaying earning programs
+  Extends JoyBaseComponent for consistency and reusability
+{% endcomment %}
+
+{% render 'joy-base-component' %}
+
+<script>
+/**
+ * Joy Earning Programs Component
+ * Displays customer loyalty earning programs with flexible design options
+ * @extends JoyBaseComponent
+ */
+class JoyEarningPrograms extends window.JoyComponents.BaseComponent {
+  // Component-specific constants
+  static COMPONENT_NAME = 'joy-earning-programs';
+  static PROGRAM_TYPES = {
+    SIGNUP: 'signup',
+    BIRTHDAY: 'birthday',
+    REVIEW: 'review',
+    SOCIAL_SHARE: 'social_share',
+    REFERRAL: 'referral',
+    PURCHASE: 'purchase',
+    NEWSLETTER: 'newsletter'
+  };
+
+  static LAYOUT_TYPES = {
+    GRID: 'grid',
+    LIST: 'list',
+    CARDS: 'cards'
+  };
+
+  static CSS_CLASSES = {
+    ...window.JoyComponents.BaseComponent.CSS_CLASSES,
+    PROGRAMS_CONTAINER: 'joy-earning-programs',
+    PROGRAM_CARD: 'joy-earning-programs__card',
+    PROGRAM_ICON: 'joy-earning-programs__icon',
+    PROGRAM_CONTENT: 'joy-earning-programs__content',
+    PROGRAM_TITLE: 'joy-earning-programs__title',
+    PROGRAM_DESCRIPTION: 'joy-earning-programs__description',
+    PROGRAM_POINTS: 'joy-earning-programs__points',
+    PROGRAM_COMPLETED: 'joy-earning-programs__card--completed',
+    COMPLETION_BADGE: 'joy-earning-programs__completion-badge'
+  };
+
+  constructor() {
+    super();
+
+    // Component-specific properties
+    this.programs = [];
+    this.layoutType = this.dataset.layout || JoyEarningPrograms.LAYOUT_TYPES.GRID;
+    this.showCompleted = this.dataset.showCompleted !== 'false';
+    this.maxPrograms = parseInt(this.dataset.maxPrograms) || 0;
+    this.filterTypes = this.dataset.filterTypes ? this.dataset.filterTypes.split(',') : [];
+  }
+
+  /**
+   * Initialize earning programs component
+   * @param {Object} joyInstance - Joy SDK instance
+   */
+  async onJoyReady(joyInstance) {
+    try {
+      await this.loadEarningPrograms(joyInstance);
+
+      if (this.programs.length === 0) {
+        this.renderEmptyState('No earning programs are currently available.');
+        return;
+      }
+
+      this.renderPrograms();
+      this.attachEventListeners();
+
+    } catch (error) {
+      this.error('Failed to load earning programs', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load earning programs from Joy SDK
+   * @param {Object} joyInstance - Joy SDK instance
+   */
+  async loadEarningPrograms(joyInstance) {
+    this.log('Loading earning programs');
+
+    // Validate SDK method availability
+    if (typeof joyInstance.earnPrograms !== 'function') {
+      throw new Error('earnPrograms method not available in Joy SDK');
+    }
+
+    try {
+      const programsData = await joyInstance.earnPrograms();
+      this.log('Raw earning programs data received', programsData);
+
+      if (!Array.isArray(programsData)) {
+        throw new Error('Invalid earning programs data format');
+      }
+
+      // Process and filter programs
+      this.programs = this.processPrograms(programsData);
+      this.log(`Processed ${this.programs.length} earning programs`);
+
+    } catch (error) {
+      this.error('Failed to fetch earning programs from SDK', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process and filter programs based on component settings
+   * @param {Array} rawPrograms - Raw programs from SDK
+   * @returns {Array} Processed programs
+   */
+  processPrograms(rawPrograms) {
+    let programs = rawPrograms.filter(program => {
+      // Basic validation
+      if (!program || !program.title) {
+        this.warn('Invalid program data, skipping', program);
+        return false;
+      }
+
+      // Filter by status (only active, non-draft programs)
+      if (!program.status || program.isDraft) {
+        this.log('Skipping inactive/draft program', program.title);
+        return false;
+      }
+
+      // Filter by program types if specified
+      if (this.filterTypes.length > 0 && !this.filterTypes.includes(program.event)) {
+        this.log('Skipping program due to type filter', program.title);
+        return false;
+      }
+
+      return true;
+    });
+
+    // Filter completed programs if not showing them
+    if (!this.showCompleted) {
+      programs = programs.filter(program => !this.isProgramCompleted(program));
+    }
+
+    // Limit number of programs if specified
+    if (this.maxPrograms > 0) {
+      programs = programs.slice(0, this.maxPrograms);
+    }
+
+    // Sort programs by priority/order
+    programs.sort((a, b) => {
+      const priorityA = a.displayOrder || a.priority || 999;
+      const priorityB = b.displayOrder || b.priority || 999;
+      return priorityA - priorityB;
+    });
+
+    return programs;
+  }
+
+  /**
+   * Check if a program has been completed by the customer
+   * @param {Object} program - Program object
+   * @returns {boolean} True if program is completed
+   */
+  isProgramCompleted(program) {
+    const customerData = this.getCustomerData();
+
+    if (!customerData || !customerData.completedPrograms) {
+      return false;
+    }
+
+    // Check various ways programs might be marked as completed
+    return customerData.completedPrograms.includes(program.id) ||
+           customerData.completedPrograms.includes(program.event) ||
+           (program.event === 'birthday' && customerData.birthday) ||
+           (program.event === 'signup' && customerData.signupComplete);
+  }
+
+  /**
+   * Render programs based on layout type
+   */
+  renderPrograms() {
+    this.innerHTML = '';
+
+    // Create container with appropriate layout
+    const container = this.createProgramsContainer();
+
+    // Render each program
+    this.programs.forEach((program, index) => {
+      try {
+        const programElement = this.createProgramElement(program, index);
+        container.appendChild(programElement);
+      } catch (error) {
+        this.error(`Failed to render program ${program.title}`, error);
+      }
+    });
+
+    this.appendChild(container);
+    this.log(`Rendered ${this.programs.length} programs with ${this.layoutType} layout`);
+  }
+
+  /**
+   * Create programs container with appropriate layout classes
+   * @returns {HTMLElement} Container element
+   */
+  createProgramsContainer() {
+    const container = document.createElement('div');
+    container.className = `${JoyEarningPrograms.CSS_CLASSES.PROGRAMS_CONTAINER} ${JoyEarningPrograms.CSS_CLASSES.PROGRAMS_CONTAINER}--${this.layoutType}`;
+
+    // Add data attributes for styling
+    container.dataset.layout = this.layoutType;
+    container.dataset.count = this.programs.length;
+
+    return container;
+  }
+
+  /**
+   * Create individual program element
+   * @param {Object} program - Program data
+   * @param {number} index - Program index
+   * @returns {HTMLElement} Program element
+   */
+  createProgramElement(program, index) {
+    const element = document.createElement('div');
+    const isCompleted = this.isProgramCompleted(program);
+
+    // Set up element classes and attributes
+    element.className = JoyEarningPrograms.CSS_CLASSES.PROGRAM_CARD;
+    if (isCompleted) {
+      element.classList.add(JoyEarningPrograms.CSS_CLASSES.PROGRAM_COMPLETED);
+    }
+
+    element.dataset.programId = program.id;
+    element.dataset.programEvent = program.event;
+    element.dataset.programIndex = index;
+
+    // Generate program content
+    element.innerHTML = this.generateProgramHTML(program, isCompleted);
+
+    return element;
+  }
+
+  /**
+   * Generate HTML content for a program
+   * @param {Object} program - Program data
+   * @param {boolean} isCompleted - Whether program is completed
+   * @returns {string} HTML content
+   */
+  generateProgramHTML(program, isCompleted) {
+    const iconHTML = this.generateProgramIcon(program);
+    const pointsText = this.generatePointsText(program);
+    const completionBadge = isCompleted ? this.generateCompletionBadge() : '';
+
+    return `
+      <div class="${JoyEarningPrograms.CSS_CLASSES.PROGRAM_ICON}">
+        ${iconHTML}
+      </div>
+      <div class="${JoyEarningPrograms.CSS_CLASSES.PROGRAM_CONTENT}">
+        <h3 class="${JoyEarningPrograms.CSS_CLASSES.PROGRAM_TITLE}">
+          ${this.escapeHtml(program.title)}
+        </h3>
+        <p class="${JoyEarningPrograms.CSS_CLASSES.PROGRAM_DESCRIPTION}">
+          ${this.escapeHtml(this.getProgramDescription(program))}
+        </p>
+        ${pointsText ? `<div class="${JoyEarningPrograms.CSS_CLASSES.PROGRAM_POINTS}">${pointsText}</div>` : ''}
+      </div>
+      ${completionBadge}
+    `;
+  }
+
+  /**
+   * Generate program icon HTML with fallback
+   * @param {Object} program - Program data
+   * @returns {string} Icon HTML
+   */
+  generateProgramIcon(program) {
+    const iconUrl = program.loyaltyPageCustomIcon;
+    const fallbackEmoji = this.getFallbackEmoji(program.event);
+    const hasValidIcon = this.isValidIconUrl(iconUrl);
+
+    if (hasValidIcon) {
+      return `
+        <img src="${iconUrl}"
+             alt="${this.escapeHtml(program.title)}"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="joy-earning-programs__icon-fallback" style="display:none;">
+          ${fallbackEmoji}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="joy-earning-programs__icon-fallback">
+        ${fallbackEmoji}
+      </div>
+    `;
+  }
+
+  /**
+   * Generate points text for program
+   * @param {Object} program - Program data
+   * @returns {string} Points text or empty string
+   */
+  generatePointsText(program) {
+    const points = program.earnPoint || program.points || 0;
+
+    if (points <= 0) {
+      return '';
+    }
+
+    return `+${this.formatPointsText(points)}`;
+  }
+
+  /**
+   * Generate completion badge
+   * @returns {string} Completion badge HTML
+   */
+  generateCompletionBadge() {
+    return `
+      <div class="${JoyEarningPrograms.CSS_CLASSES.COMPLETION_BADGE}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    `;
+  }
+
+  /**
+   * Get program description with fallbacks
+   * @param {Object} program - Program data
+   * @returns {string} Program description
+   */
+  getProgramDescription(program) {
+    if (program.description) {
+      return program.description;
+    }
+
+    // Generate description based on program type
+    const descriptionMap = {
+      [JoyEarningPrograms.PROGRAM_TYPES.SIGNUP]: 'Create an account to start earning points',
+      [JoyEarningPrograms.PROGRAM_TYPES.BIRTHDAY]: 'Add your birthday to receive special rewards',
+      [JoyEarningPrograms.PROGRAM_TYPES.REVIEW]: 'Write a product review to earn points',
+      [JoyEarningPrograms.PROGRAM_TYPES.SOCIAL_SHARE]: 'Share on social media to earn points',
+      [JoyEarningPrograms.PROGRAM_TYPES.REFERRAL]: 'Refer friends to earn bonus points',
+      [JoyEarningPrograms.PROGRAM_TYPES.PURCHASE]: 'Earn points with every purchase',
+      [JoyEarningPrograms.PROGRAM_TYPES.NEWSLETTER]: 'Subscribe to our newsletter for points'
+    };
+
+    return descriptionMap[program.event] || 'Complete this action to earn points';
+  }
+
+  /**
+   * Check if icon URL is valid
+   * @param {string} iconUrl - Icon URL to check
+   * @returns {boolean} True if valid
+   */
+  isValidIconUrl(iconUrl) {
+    return iconUrl &&
+           typeof iconUrl === 'string' &&
+           iconUrl.trim() !== '' &&
+           !iconUrl.includes('undefined') &&
+           !iconUrl.includes('null');
+  }
+
+  /**
+   * Attach event listeners to program elements
+   */
+  attachEventListeners() {
+    // Use event delegation for better performance
+    this.addEventListener('click', this.handleProgramClick.bind(this));
+    this.addEventListener('keydown', this.handleKeyDown.bind(this));
+  }
+
+  /**
+   * Handle program click events
+   * @param {Event} event - Click event
+   */
+  async handleProgramClick(event) {
+    const programCard = event.target.closest(`.${JoyEarningPrograms.CSS_CLASSES.PROGRAM_CARD}`);
+
+    if (!programCard) return;
+
+    const programId = programCard.dataset.programId;
+    const programEvent = programCard.dataset.programEvent;
+    const program = this.programs.find(p => p.id === programId);
+
+    if (!program) {
+      this.warn('Program not found for click event', { programId, programEvent });
+      return;
+    }
+
+    this.log('Program clicked', { title: program.title, event: program.event });
+
+    try {
+      await this.handleProgramAction(program, programCard);
+    } catch (error) {
+      this.error('Failed to handle program action', error);
+    }
+  }
+
+  /**
+   * Handle keyboard navigation
+   * @param {Event} event - Keyboard event
+   */
+  handleKeyDown(event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.handleProgramClick(event);
+    }
+  }
+
+  /**
+   * Handle program-specific actions
+   * @param {Object} program - Program data
+   * @param {HTMLElement} element - Program element
+   */
+  async handleProgramAction(program, element) {
+    // Check if user is logged in for actions that require it
+    if (this.requiresAuth(program.event) && !this.customerId) {
+      this.redirectToAuth();
+      return;
+    }
+
+    // Dispatch program action event for parent components to handle
+    const actionEvent = new CustomEvent('programaction', {
+      detail: { program, element },
+      bubbles: true,
+      cancelable: true
+    });
+
+    this.dispatchEvent(actionEvent);
+
+    // If event wasn't handled by parent, try to handle internally
+    if (!actionEvent.defaultPrevented) {
+      await this.executeDefaultAction(program, element);
+    }
+  }
+
+  /**
+   * Check if program type requires authentication
+   * @param {string} programEvent - Program event type
+   * @returns {boolean} True if authentication required
+   */
+  requiresAuth(programEvent) {
+    const authRequired = [
+      JoyEarningPrograms.PROGRAM_TYPES.BIRTHDAY,
+      JoyEarningPrograms.PROGRAM_TYPES.REVIEW,
+      JoyEarningPrograms.PROGRAM_TYPES.REFERRAL
+    ];
+
+    return authRequired.includes(programEvent);
+  }
+
+  /**
+   * Redirect to authentication
+   */
+  redirectToAuth() {
+    this.log('Redirecting to authentication');
+
+    // Try to use Joy SDK auth if available
+    const joyInstance = this.getJoyInstance();
+    if (joyInstance && typeof joyInstance.showAuth === 'function') {
+      joyInstance.showAuth();
+    } else {
+      // Fallback to login page
+      window.location.href = '/account/login';
+    }
+  }
+
+  /**
+   * Execute default action for program
+   * @param {Object} program - Program data
+   * @param {HTMLElement} element - Program element
+   */
+  async executeDefaultAction(program, element) {
+    const joyInstance = this.getJoyInstance();
+
+    if (!joyInstance) {
+      this.warn('Joy SDK not available for program action');
+      return;
+    }
+
+    // Try to use Joy SDK program handler
+    if (typeof joyInstance.executeProgram === 'function') {
+      try {
+        const result = await joyInstance.executeProgram(program.id, {
+          customerData: this.getCustomerData(),
+          programData: program
+        });
+
+        this.log('Program execution result', result);
+
+        // Update UI if program was completed
+        if (result && result.completed) {
+          this.markProgramCompleted(element, program);
+        }
+
+      } catch (error) {
+        this.error('Failed to execute program via SDK', error);
+      }
+    } else {
+      this.log('executeProgram method not available, using fallback');
+      // Implement fallback logic for specific program types
+      this.executeFallbackAction(program, element);
+    }
+  }
+
+  /**
+   * Execute fallback action for programs when SDK method unavailable
+   * @param {Object} program - Program data
+   * @param {HTMLElement} element - Program element
+   */
+  executeFallbackAction(program, element) {
+    switch (program.event) {
+      case JoyEarningPrograms.PROGRAM_TYPES.SOCIAL_SHARE:
+        this.handleSocialShare(program);
+        break;
+
+      case JoyEarningPrograms.PROGRAM_TYPES.NEWSLETTER:
+        this.handleNewsletterSignup(program);
+        break;
+
+      default:
+        this.log('No fallback action available for program type', program.event);
+    }
+  }
+
+  /**
+   * Handle social share program
+   * @param {Object} program - Program data
+   */
+  handleSocialShare(program) {
+    // Implement social share logic
+    this.log('Handling social share program', program.title);
+
+    // Example: Open share dialog
+    if (navigator.share) {
+      navigator.share({
+        title: document.title,
+        url: window.location.href
+      });
+    } else {
+      // Fallback: Copy to clipboard
+      navigator.clipboard.writeText(window.location.href);
+    }
+  }
+
+  /**
+   * Handle newsletter signup program
+   * @param {Object} program - Program data
+   */
+  handleNewsletterSignup(program) {
+    // Implement newsletter signup logic
+    this.log('Handling newsletter signup program', program.title);
+
+    // Example: Trigger newsletter modal or redirect
+    const newsletterForm = document.querySelector('#newsletter-signup');
+    if (newsletterForm) {
+      newsletterForm.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  /**
+   * Mark program as completed in UI
+   * @param {HTMLElement} element - Program element
+   * @param {Object} program - Program data
+   */
+  markProgramCompleted(element, program) {
+    element.classList.add(JoyEarningPrograms.CSS_CLASSES.PROGRAM_COMPLETED);
+
+    // Add completion badge if not present
+    if (!element.querySelector(`.${JoyEarningPrograms.CSS_CLASSES.COMPLETION_BADGE}`)) {
+      const badge = document.createElement('div');
+      badge.className = JoyEarningPrograms.CSS_CLASSES.COMPLETION_BADGE;
+      badge.innerHTML = this.generateCompletionBadge();
+      element.appendChild(badge);
+    }
+
+    this.log('Program marked as completed', program.title);
+
+    // Dispatch completion event
+    this.dispatchEvent(new CustomEvent('programcomplete', {
+      detail: { program, element },
+      bubbles: true
+    }));
+  }
+
+  /**
+   * Refresh programs data
+   */
+  async refresh() {
+    this.log('Refreshing earning programs');
+
+    try {
+      this.setState(JoyBaseComponent.STATES.LOADING);
+      this.cachedData.clear(); // Clear cached data
+
+      const joyInstance = this.getJoyInstance();
+      if (joyInstance) {
+        await this.onJoyReady(joyInstance);
+      }
+    } catch (error) {
+      this.error('Failed to refresh programs', error);
+      this.setState(JoyBaseComponent.STATES.ERROR);
+    }
+  }
+}
+
+// Register the custom element
+if (!customElements.get(JoyEarningPrograms.COMPONENT_NAME)) {
+  customElements.define(JoyEarningPrograms.COMPONENT_NAME, JoyEarningPrograms);
+  console.log(`[Joy] Registered ${JoyEarningPrograms.COMPONENT_NAME} component`);
+}
+
+// Export to global namespace
+window.JoyComponents.EarningPrograms = JoyEarningPrograms;
+</script>
+
+<style>
+  /* Earning Programs Component Styles */
+  .joy-earning-programs {
+    display: grid;
+    gap: var(--joy-spacing-md);
+    width: 100%;
+  }
+
+  /* Layout variations */
+  .joy-earning-programs--grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .joy-earning-programs--list {
+    grid-template-columns: 1fr;
+  }
+
+  .joy-earning-programs--cards {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--joy-spacing-lg);
+  }
+
+  /* Program card */
+  .joy-earning-programs__card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--joy-spacing-md);
+    padding: var(--joy-spacing-lg);
+    background: var(--joy-background);
+    border: 1px solid var(--joy-border-color);
+    border-radius: var(--joy-border-radius);
+    transition: var(--joy-transition);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .joy-earning-programs__card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-color: var(--joy-primary-color);
+  }
+
+  .joy-earning-programs__card:focus {
+    outline: 2px solid var(--joy-primary-color);
+    outline-offset: 2px;
+  }
+
+  /* Completed state */
+  .joy-earning-programs__card--completed {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .joy-earning-programs__card--completed .joy-earning-programs__title {
+    text-decoration: line-through;
+  }
+
+  /* Program icon */
+  .joy-earning-programs__icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(212, 165, 116, 0.08);
+    border-radius: calc(var(--joy-border-radius) * 0.75);
+  }
+
+  .joy-earning-programs__icon img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  .joy-earning-programs__icon-fallback {
+    font-size: 24px;
+    color: var(--joy-primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Program content */
+  .joy-earning-programs__content {
+    flex: 1;
+    min-width: 0; /* Prevent flex item from overflowing */
+  }
+
+  .joy-earning-programs__title {
+    margin: 0 0 var(--joy-spacing-xs) 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--joy-text-primary);
+    line-height: 1.4;
+  }
+
+  .joy-earning-programs__description {
+    margin: 0 0 var(--joy-spacing-sm) 0;
+    font-size: 14px;
+    color: var(--joy-text-secondary);
+    line-height: 1.5;
+  }
+
+  .joy-earning-programs__points {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--joy-primary-color);
+  }
+
+  /* Completion badge */
+  .joy-earning-programs__completion-badge {
+    position: absolute;
+    top: var(--joy-spacing-sm);
+    right: var(--joy-spacing-sm);
+    width: 24px;
+    height: 24px;
+    background: var(--joy-primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  /* Cards layout specific styles */
+  .joy-earning-programs--cards .joy-earning-programs__card {
+    flex-direction: column;
+    text-align: center;
+    padding: var(--joy-spacing-xl);
+  }
+
+  .joy-earning-programs--cards .joy-earning-programs__icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: var(--joy-spacing-md);
+  }
+
+  .joy-earning-programs--cards .joy-earning-programs__icon img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .joy-earning-programs--cards .joy-earning-programs__icon-fallback {
+    font-size: 32px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .joy-earning-programs--grid {
+      grid-template-columns: 1fr;
+    }
+
+    .joy-earning-programs--cards {
+      grid-template-columns: 1fr;
+    }
+
+    .joy-earning-programs__card {
+      padding: var(--joy-spacing-md);
+    }
+
+    .joy-earning-programs--cards .joy-earning-programs__card {
+      padding: var(--joy-spacing-lg);
+    }
+  }
+</style>
