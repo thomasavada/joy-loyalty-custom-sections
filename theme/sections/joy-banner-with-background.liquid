@@ -28,8 +28,33 @@
 
   @media screen and (min-width: 750px) {
   .banner-with-background {
+  {% if section.settings.desktop_height_adapt %}
+  min-height: auto;
+  {% else %}
   min-height: {{ section.settings.desktop_height | default: 500 }}px;
+  {% endif %}
   }
+
+  {% if section.settings.desktop_height_adapt %}
+  .banner-with-background__image {
+  position: relative;
+  height: auto;
+  }
+
+  .banner-with-background__image img {
+  position: relative;
+  height: auto;
+  width: 100%;
+  }
+
+  .banner-with-background__content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  }
+  {% endif %}
   }
 
   .banner-with-background__image {
@@ -45,7 +70,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
+  object-position: {{ section.settings.image_position | default: "center" }};
   }
 
   .banner-with-background__overlay {
@@ -440,12 +465,20 @@
             <div class="banner-with-background__buttons" {{ block.shopify_attributes }}>
               {%- if customer and block.settings.show_customer_buttons -%}
                 {%- comment -%} Buttons for logged-in customers {%- endcomment -%}
-                {%- if block.settings.customer_button_label != blank -%}
+                {%- if block.settings.customer_button_label_1 != blank -%}
                   <a
-                    href="{{ block.settings.customer_button_link | default: '#' }}"
-                    class="button banner-with-background__button {{ button_size_class }}{% if block.settings.customer_button_style_secondary %} button--secondary{% else %} button--primary{% endif %}"
+                    href="{{ block.settings.customer_button_link_1 | default: '#' }}"
+                    class="button banner-with-background__button {{ button_size_class }}{% if block.settings.customer_button_style_secondary_1 %} button--secondary{% else %} button--primary{% endif %}"
                   >
-                    {{ block.settings.customer_button_label | escape }}
+                    {{ block.settings.customer_button_label_1 | escape }}
+                  </a>
+                {%- endif -%}
+                {%- if block.settings.customer_button_label_2 != blank -%}
+                  <a
+                    href="{{ block.settings.customer_button_link_2 | default: '#' }}"
+                    class="button banner-with-background__button {{ button_size_class }}{% if block.settings.customer_button_style_secondary_2 %} button--secondary{% else %} button--primary{% endif %}"
+                  >
+                    {{ block.settings.customer_button_label_2 | escape }}
                   </a>
                 {%- endif -%}
               {%- else -%}
@@ -495,6 +528,51 @@
       "type": "image_picker",
       "id": "image",
       "label": "Background image"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "Background image position",
+      "options": [
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "top",
+          "label": "Top"
+        },
+        {
+          "value": "bottom",
+          "label": "Bottom"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        },
+        {
+          "value": "top left",
+          "label": "Top Left"
+        },
+        {
+          "value": "top right",
+          "label": "Top Right"
+        },
+        {
+          "value": "bottom left",
+          "label": "Bottom Left"
+        },
+        {
+          "value": "bottom right",
+          "label": "Bottom Right"
+        }
+      ],
+      "default": "center",
+      "info": "Choose where the image should be positioned within the banner"
     },
     {
       "type": "checkbox",
@@ -579,6 +657,13 @@
       "info": "Image height on mobile. For stack layout, this is the image section height."
     },
     {
+      "type": "checkbox",
+      "id": "desktop_height_adapt",
+      "label": "Adapt to image height (Desktop only)",
+      "default": false,
+      "info": "On desktop, banner will adjust to the actual image height instead of using a fixed height"
+    },
+    {
       "type": "range",
       "id": "desktop_height",
       "min": 400,
@@ -586,7 +671,8 @@
       "step": 50,
       "unit": "px",
       "label": "Desktop height",
-      "default": 500
+      "default": 500,
+      "info": "Only applies when 'Adapt to image height' is disabled"
     },
     {
       "type": "header",
@@ -937,7 +1023,7 @@
         {
           "type": "text",
           "id": "button_label_1",
-          "default": "Shop Now",
+          "default": "Sign in",
           "label": "Button 1 label"
         },
         {
@@ -958,7 +1044,7 @@
         {
           "type": "text",
           "id": "button_label_2",
-          "default": "Learn More",
+          "default": "Sign up",
           "label": "Button 2 label"
         },
         {
@@ -974,30 +1060,47 @@
         },
         {
           "type": "header",
-          "content": "Customer Button (Logged-in users)"
+          "content": "Customer Buttons (Logged-in users)"
         },
         {
           "type": "checkbox",
           "id": "show_customer_buttons",
           "default": false,
-          "label": "Show different button for logged-in customers"
+          "label": "Show different buttons for logged-in customers"
         },
         {
           "type": "text",
-          "id": "customer_button_label",
-          "default": "View Rewards",
-          "label": "Customer button label"
+          "id": "customer_button_label_1",
+          "default": "Shop now",
+          "label": "Customer button 1 label"
         },
         {
           "type": "url",
-          "id": "customer_button_link",
-          "label": "Customer button link"
+          "id": "customer_button_link_1",
+          "label": "Customer button 1 link"
         },
         {
           "type": "checkbox",
-          "id": "customer_button_style_secondary",
+          "id": "customer_button_style_secondary_1",
           "default": false,
-          "label": "Use outline button style for customer button"
+          "label": "Use outline button style for customer button 1"
+        },
+        {
+          "type": "text",
+          "id": "customer_button_label_2",
+          "default": "View rewards",
+          "label": "Customer button 2 label"
+        },
+        {
+          "type": "url",
+          "id": "customer_button_link_2",
+          "label": "Customer button 2 link"
+        },
+        {
+          "type": "checkbox",
+          "id": "customer_button_style_secondary_2",
+          "default": true,
+          "label": "Use outline button style for customer button 2"
         }
       ]
     },

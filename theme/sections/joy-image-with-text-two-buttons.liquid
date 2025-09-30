@@ -426,16 +426,28 @@
               <div class="image-with-text__buttons" {{ block.shopify_attributes }}>
                 {%- if customer and block.settings.show_customer_buttons -%}
                   {%- comment -%} Buttons for logged-in customers {%- endcomment -%}
-                  {%- if block.settings.customer_button_label != blank -%}
+                  {%- if block.settings.customer_button_label_1 != blank -%}
                     <a
-                      {% if block.settings.customer_button_link == blank %}
+                      {% if block.settings.customer_button_link_1 == blank %}
                         role="link" aria-disabled="true"
                       {% else %}
-                        href="{{ block.settings.customer_button_link }}"
+                        href="{{ block.settings.customer_button_link_1 }}"
                       {% endif %}
-                      class="button image-with-text__button {{ button_size_class }}{% if block.settings.customer_button_style_secondary %} button--secondary{% else %} button--primary{% endif %}"
+                      class="button image-with-text__button {{ button_size_class }}{% if block.settings.customer_button_style_secondary_1 %} button--secondary{% else %} button--primary{% endif %}"
                     >
-                      {{ block.settings.customer_button_label | escape }}
+                      {{ block.settings.customer_button_label_1 | escape }}
+                    </a>
+                  {%- endif -%}
+                  {%- if block.settings.customer_button_label_2 != blank -%}
+                    <a
+                      {% if block.settings.customer_button_link_2 == blank %}
+                        role="link" aria-disabled="true"
+                      {% else %}
+                        href="{{ block.settings.customer_button_link_2 }}"
+                      {% endif %}
+                      class="button image-with-text__button {{ button_size_class }}{% if block.settings.customer_button_style_secondary_2 %} button--secondary{% else %} button--primary{% endif %}"
+                    >
+                      {{ block.settings.customer_button_label_2 | escape }}
                     </a>
                   {%- endif -%}
                 {%- else -%}
@@ -986,7 +998,7 @@
         {
           "type": "text",
           "id": "button_label_1",
-          "default": "Button label",
+          "default": "Sign in",
           "label": "Button 1 label",
           "info": "Leave blank to hide this button"
         },
@@ -1008,7 +1020,7 @@
         {
           "type": "text",
           "id": "button_label_2",
-          "default": "Button label",
+          "default": "Sign up",
           "label": "Button 2 label",
           "info": "Leave blank to hide this button"
         },
@@ -1025,32 +1037,50 @@
         },
         {
           "type": "header",
-          "content": "Customer Button (Logged-in users)"
+          "content": "Customer Buttons (Logged-in users)"
         },
         {
           "type": "checkbox",
           "id": "show_customer_buttons",
           "default": false,
-          "label": "Show different button for logged-in customers",
-          "info": "When enabled, logged-in customers will see a single custom button instead of the regular buttons"
+          "label": "Show different buttons for logged-in customers",
+          "info": "When enabled, logged-in customers will see custom buttons instead of the regular buttons"
         },
         {
           "type": "text",
-          "id": "customer_button_label",
-          "default": "Shop product",
-          "label": "Customer button label",
+          "id": "customer_button_label_1",
+          "default": "Shop now",
+          "label": "Customer button 1 label",
           "info": "Button text shown to logged-in customers"
         },
         {
           "type": "url",
-          "id": "customer_button_link",
-          "label": "Customer button link"
+          "id": "customer_button_link_1",
+          "label": "Customer button 1 link"
         },
         {
           "type": "checkbox",
-          "id": "customer_button_style_secondary",
+          "id": "customer_button_style_secondary_1",
           "default": false,
-          "label": "Use outline button style for customer button"
+          "label": "Use outline button style for customer button 1"
+        },
+        {
+          "type": "text",
+          "id": "customer_button_label_2",
+          "default": "View rewards",
+          "label": "Customer button 2 label",
+          "info": "Button text shown to logged-in customers"
+        },
+        {
+          "type": "url",
+          "id": "customer_button_link_2",
+          "label": "Customer button 2 link"
+        },
+        {
+          "type": "checkbox",
+          "id": "customer_button_style_secondary_2",
+          "default": true,
+          "label": "Use outline button style for customer button 2"
         }
       ]
     }
