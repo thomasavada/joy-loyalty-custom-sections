@@ -1,0 +1,1042 @@
+{%- style -%}
+  .section-{{ section.id }}-padding {
+  padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+  padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+  .section-{{ section.id }}-padding {
+  padding-top: {{ section.settings.padding_top }}px;
+  padding-bottom: {{ section.settings.padding_bottom }}px;
+  }
+  }
+
+  .section-{{ section.id }} {
+  --button-primary-bg: {{ section.settings.button_primary_bg | default: "#121212" }};
+  --button-primary-text: {{ section.settings.button_primary_text | default: "#ffffff" }};
+  --button-secondary-border: {{ section.settings.button_secondary_border | default: "#121212" }};
+  --button-secondary-text: {{ section.settings.button_secondary_text | default: "#121212" }};
+  --overlay-color: {{ section.settings.overlay_color | default: "#000000" }};
+  --overlay-opacity: {{ section.settings.overlay_opacity | default: 0.3 }};
+  }
+
+  .banner-with-background {
+  position: relative;
+  overflow: hidden;
+  min-height: {{ section.settings.mobile_height | default: 400 }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+  .banner-with-background {
+  min-height: {{ section.settings.desktop_height | default: 500 }}px;
+  }
+  }
+
+  .banner-with-background__image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  }
+
+  .banner-with-background__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  }
+
+  .banner-with-background__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--overlay-color);
+  opacity: var(--overlay-opacity);
+  z-index: 2;
+  pointer-events: none !important;
+  display: block !important;
+  }
+
+  .banner-with-background__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: {{ section.settings.mobile_height | default: 400 }}px;
+  padding: {{ section.settings.content_padding_mobile | default: 32 }}px {{ section.settings.content_padding_mobile | default: 24 }}px;
+  width: 100%;
+  color: {{ section.settings.text_color | default: "#ffffff" }};
+  }
+
+  @media screen and (min-width: 750px) {
+  .banner-with-background__content {
+  min-height: {{ section.settings.desktop_height | default: 500 }}px;
+  padding: {{ section.settings.content_padding | default: 48 }}px {{ section.settings.content_padding | default: 48 }}px;
+  }
+  }
+
+  .banner-with-background__content-inner {
+  width: 100%;
+  max-width: {{ section.settings.content_max_width | default: 800 }}px;
+  }
+
+  /* Horizontal alignment variants */
+  .banner-with-background__content--left-most .banner-with-background__content-inner {
+  margin-right: auto;
+  margin-left: 0;
+  max-width: 100%;
+  }
+
+  .banner-with-background__content--left .banner-with-background__content-inner {
+  margin-right: auto;
+  margin-left: 0;
+  }
+
+  .banner-with-background__content--middle-left .banner-with-background__content-inner {
+  margin-right: auto;
+  margin-left: 12.5%;
+  }
+
+  .banner-with-background__content--center .banner-with-background__content-inner {
+  margin: 0 auto;
+  }
+
+  .banner-with-background__content--middle-right .banner-with-background__content-inner {
+  margin-left: auto;
+  margin-right: 12.5%;
+  }
+
+  .banner-with-background__content--right .banner-with-background__content-inner {
+  margin-left: auto;
+  margin-right: 0;
+  }
+
+  .banner-with-background__content--right-most .banner-with-background__content-inner {
+  margin-left: auto;
+  margin-right: 0;
+  max-width: 100%;
+  }
+
+  /* Mobile layout variants */
+  @media screen and (max-width: 749px) {
+  .banner-with-background--stack-mobile {
+  display: flex;
+  flex-direction: column;
+  min-height: auto;
+  }
+
+  .banner-with-background--stack-mobile .banner-with-background__image {
+  position: relative;
+  height: {{ section.settings.mobile_height | default: 400 }}px;
+  min-height: 250px;
+  }
+
+  .banner-with-background--stack-mobile .banner-with-background__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: {{ section.settings.mobile_height | default: 400 }}px;
+  min-height: 250px;
+  }
+
+  .banner-with-background--stack-mobile .banner-with-background__content {
+  position: relative;
+  min-height: auto;
+  padding: {{ section.settings.content_padding_mobile | default: 32 }}px {{ section.settings.content_padding_mobile | default: 24 }}px;
+  background-color: {{ section.settings.mobile_stack_bg | default: "#ffffff" }};
+  color: {{ section.settings.mobile_stack_text_color | default: "#000000" }};
+  max-width: 100%;
+  }
+  }
+
+  .banner-with-background__content--top {
+  justify-content: flex-start !important;
+  }
+
+  .banner-with-background__content--middle {
+  justify-content: center !important;
+  }
+
+  .banner-with-background__content--bottom {
+  justify-content: flex-end !important;
+  }
+
+  .banner-with-background__content--left {
+  align-items: flex-start !important;
+  text-align: left !important;
+  }
+
+  .banner-with-background__content--center {
+  align-items: center !important;
+  text-align: center !important;
+  }
+
+  .banner-with-background__content--right {
+  align-items: flex-end !important;
+  text-align: right !important;
+  }
+
+  .banner-with-background__heading {
+  margin: 0 0 1rem;
+  color: inherit;
+  }
+
+  .banner-with-background__heading.h0 {
+  font-size: 3rem;
+  line-height: 1.1;
+  }
+
+  .banner-with-background__heading.h1 {
+  font-size: 2.5rem;
+  line-height: 1.2;
+  }
+
+  .banner-with-background__heading.h2 {
+  font-size: 2rem;
+  line-height: 1.3;
+  }
+
+  @media screen and (max-width: 749px) {
+  .banner-with-background__heading.h0 {
+  font-size: 2rem;
+  }
+
+  .banner-with-background__heading.h1 {
+  font-size: 1.75rem;
+  }
+
+  .banner-with-background__heading.h2 {
+  font-size: 1.5rem;
+  }
+  }
+
+  .banner-with-background__text {
+  margin: 0 0 1rem;
+  color: inherit;
+  }
+
+  .banner-with-background__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: center;
+  }
+
+  .banner-with-background__content--left .banner-with-background__buttons {
+  justify-content: flex-start !important;
+  }
+
+  .banner-with-background__content--right .banner-with-background__buttons {
+  justify-content: flex-end !important;
+  }
+
+  .banner-with-background__button {
+  flex: 0 1 auto;
+  min-width: 120px;
+  }
+
+  .banner-with-background__footer {
+  margin-top: 24px;
+  }
+
+  .banner-with-background__footer-link {
+  color: inherit;
+  text-decoration: underline;
+  font-size: 0.875rem;
+  transition: opacity 0.2s ease;
+  }
+
+  .banner-with-background__footer-link:hover {
+  opacity: 0.8;
+  }
+
+  .button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+  text-align: center;
+  }
+
+  /* Button Size Variants */
+  .section-{{ section.id }} .button--x-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  }
+
+  .section-{{ section.id }} .button--small {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  }
+
+  .section-{{ section.id }} .button--medium {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  }
+
+  .section-{{ section.id }} .button--large {
+  padding: 1.25rem 2.5rem;
+  font-size: 1.125rem;
+  }
+
+  .section-{{ section.id }} .button--x-large {
+  padding: 1.5rem 3rem;
+  font-size: 1.25rem;
+  }
+
+  .section-{{ section.id }} .button {
+  border-radius: {{ section.settings.button_border_radius | default: 4 }}px;
+  }
+
+  .section-{{ section.id }} .button::before,
+  .section-{{ section.id }} .button::after {
+  display: none !important;
+  content: none !important;
+  }
+
+  .section-{{ section.id }} .button--primary {
+  background-color: var(--button-primary-bg) !important;
+  color: var(--button-primary-text) !important;
+  border-color: var(--button-primary-bg) !important;
+  }
+
+  .section-{{ section.id }} .button--primary:not([aria-disabled="true"]):hover {
+  opacity: 0.85;
+  }
+
+  .section-{{ section.id }} .button--secondary {
+  background-color: transparent !important;
+  color: var(--button-secondary-text) !important;
+  border: 2px solid var(--button-secondary-border) !important;
+  }
+
+  .section-{{ section.id }} .button--secondary:not([aria-disabled="true"]):hover {
+  opacity: 0.85;
+  }
+
+  .section-{{ section.id }} .button[aria-disabled="true"] {
+  cursor: default;
+  }
+
+  .placeholder-svg {
+  width: 100%;
+  height: 100%;
+  background-color: rgba(var(--color-foreground), 0.04);
+  }
+
+  @media screen and (max-width: 749px) {
+  .banner-with-background__buttons {
+  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  }
+
+  .banner-with-background__button {
+  width: 100%;
+  }
+
+  .button {
+  width: 100%;
+  display: block;
+  }
+  }
+{%- endstyle -%}
+
+<div class="section-{{ section.id }}-padding">
+  <div class="section-{{ section.id }} banner-with-background{% if section.settings.mobile_layout == 'stack' %} banner-with-background--stack-mobile{% endif %}">
+    <div class="banner-with-background__image">
+      {%- if section.settings.image != blank -%}
+        {%- assign widths = '375, 550, 750, 1100, 1500, 1780, 2000, 3000, 3840' -%}
+        {%- capture sizes -%}
+          100vw
+        {%- endcapture -%}
+        {{
+        section.settings.image
+        | image_url: width: 3840
+        | image_tag: loading: 'lazy', sizes: sizes, widths: widths
+        }}
+      {%- else -%}
+        {{ 'lifestyle-2' | placeholder_svg_tag: 'placeholder-svg' }}
+      {%- endif -%}
+    </div>
+
+    {%- if section.settings.show_overlay -%}
+      <div class="banner-with-background__overlay"></div>
+    {%- endif -%}
+
+    <div class="banner-with-background__content banner-with-background__content--{{ section.settings.desktop_content_position }} banner-with-background__content--{{ section.settings.desktop_content_alignment }}">
+      <div class="banner-with-background__content-inner">
+      {%- for block in section.blocks -%}
+        {% case block.type %}
+          {%- when 'heading' -%}
+            {%- if customer and block.settings.show_customer_greeting -%}
+              {%- assign customer_name = customer.first_name | default: customer.name | default: 'there' -%}
+              {%- assign customer_points = '0' -%}
+              {%- assign formatted_points = '0' -%}
+              {%- if customer.metafields.avada_joy.point -%}
+                {%- assign customer_points = customer.metafields.avada_joy.point -%}
+                {%- assign aj_point = customer.metafields.avada_joy.point | split: '' -%}
+                {%- capture formatted_points -%}
+                  {%- for digit in aj_point -%}
+                    {%- assign threeFromEnd = aj_point.size | minus: forloop.index | modulo: 3 -%}
+                    {%- if threeFromEnd == 2 and forloop.index != 1 -%}{{ digit | prepend: ',' }}{%- else -%}{{ digit }}{%- endif -%}
+                  {% endfor %}
+                {%- endcapture -%}
+              {%- endif -%}
+              {%- assign customer_tier = customer.metafields.avada_joy.vipTier.tierName | default: '' -%}
+
+              {%- assign greeting_template = block.settings.customer_greeting_template | default: 'Hi {customer_name}, you have {points} and {tier} tier' -%}
+              {%- assign greeting_output = greeting_template | replace: '{customer_name}', customer_name | replace: '{points}', formatted_points | replace: '{tier}', customer_tier -%}
+
+              <div
+                class="banner-with-background__heading rte {{ block.settings.heading_size }}"
+                {{ block.shopify_attributes }}
+              >
+                {{ greeting_output }}
+              </div>
+            {%- else -%}
+              <div
+                class="banner-with-background__heading rte {{ block.settings.heading_size }}"
+                {{ block.shopify_attributes }}
+              >
+                {{ block.settings.heading }}
+              </div>
+            {%- endif -%}
+          {%- when 'caption' -%}
+            <p
+              class="banner-with-background__text banner-with-background__text--caption {{ block.settings.text_style }} {{ block.settings.text_style }}--{{ block.settings.text_size }}"
+              {{ block.shopify_attributes }}
+            >
+              {%- if customer and block.settings.show_customer_subtitle -%}
+                {{ block.settings.customer_subtitle | escape }}
+              {%- else -%}
+                {{ block.settings.caption | escape }}
+              {%- endif -%}
+            </p>
+          {%- when 'text' -%}
+            <div class="banner-with-background__text rte {{ block.settings.text_style }}" {{ block.shopify_attributes }}>
+              {%- if customer and block.settings.show_customer_text -%}
+                {{ block.settings.customer_text }}
+              {%- else -%}
+                {{ block.settings.text }}
+              {%- endif -%}
+            </div>
+          {%- when 'buttons' -%}
+            {%- assign button_size_class = 'button--' | append: block.settings.button_size | default: 'medium' -%}
+            <div class="banner-with-background__buttons" {{ block.shopify_attributes }}>
+              {%- if customer and block.settings.show_customer_buttons -%}
+                {%- comment -%} Buttons for logged-in customers {%- endcomment -%}
+                {%- if block.settings.customer_button_label != blank -%}
+                  <a
+                    href="{{ block.settings.customer_button_link | default: '#' }}"
+                    class="button banner-with-background__button {{ button_size_class }}{% if block.settings.customer_button_style_secondary %} button--secondary{% else %} button--primary{% endif %}"
+                  >
+                    {{ block.settings.customer_button_label | escape }}
+                  </a>
+                {%- endif -%}
+              {%- else -%}
+                {%- comment -%} Regular buttons for guests/default {%- endcomment -%}
+                {%- if block.settings.button_label_1 != blank -%}
+                  <a
+                    href="{{ block.settings.button_link_1 | default: '#' }}"
+                    class="button banner-with-background__button {{ button_size_class }}{% if block.settings.button_style_secondary_1 %} button--secondary{% else %} button--primary{% endif %}"
+                  >
+                    {{ block.settings.button_label_1 | escape }}
+                  </a>
+                {%- endif -%}
+                {%- if block.settings.button_label_2 != blank -%}
+                  <a
+                    href="{{ block.settings.button_link_2 | default: '#' }}"
+                    class="button banner-with-background__button {{ button_size_class }}{% if block.settings.button_style_secondary_2 %} button--secondary{% else %} button--primary{% endif %}"
+                  >
+                    {{ block.settings.button_label_2 | escape }}
+                  </a>
+                {%- endif -%}
+              {%- endif -%}
+            </div>
+          {%- when 'footer_link' -%}
+            <div class="banner-with-background__footer" {{ block.shopify_attributes }}>
+              {%- if block.settings.footer_text != blank -%}
+                <a href="{{ block.settings.footer_link }}" class="banner-with-background__footer-link">
+                  {{ block.settings.footer_text | escape }}
+                </a>
+              {%- endif -%}
+            </div>
+        {%- endcase -%}
+      {%- endfor -%}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Joy: Hero banner",
+  "class": "section",
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Background image"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_overlay",
+      "default": true,
+      "label": "Show overlay",
+      "info": "Adds an overlay to improve text readability"
+    },
+    {
+      "type": "color",
+      "id": "overlay_color",
+      "label": "Overlay color",
+      "default": "#000000",
+      "info": "Color of the overlay (usually black or dark color)"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "min": 0,
+      "max": 0.9,
+      "step": 0.1,
+      "unit": "op",
+      "label": "Overlay opacity",
+      "default": 0.3,
+      "info": "Darkness of the overlay (0 = transparent, 0.9 = very dark)"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#ffffff",
+      "info": "Color for all text in the banner"
+    },
+    {
+      "type": "header",
+      "content": "Mobile Layout"
+    },
+    {
+      "type": "select",
+      "id": "mobile_layout",
+      "options": [
+        {
+          "value": "overlay",
+          "label": "Overlay (text over image)"
+        },
+        {
+          "value": "stack",
+          "label": "Stack (image then text)"
+        }
+      ],
+      "default": "overlay",
+      "label": "Mobile layout style",
+      "info": "Choose how content displays on mobile devices"
+    },
+    {
+      "type": "color",
+      "id": "mobile_stack_bg",
+      "label": "Mobile stack background color",
+      "default": "#ffffff",
+      "info": "Background color for text area when using stack layout on mobile"
+    },
+    {
+      "type": "color",
+      "id": "mobile_stack_text_color",
+      "label": "Mobile stack text color",
+      "default": "#000000",
+      "info": "Text color when using stack layout on mobile"
+    },
+    {
+      "type": "header",
+      "content": "Banner Height"
+    },
+    {
+      "type": "range",
+      "id": "mobile_height",
+      "min": 300,
+      "max": 700,
+      "step": 50,
+      "unit": "px",
+      "label": "Mobile height",
+      "default": 400,
+      "info": "Image height on mobile. For stack layout, this is the image section height."
+    },
+    {
+      "type": "range",
+      "id": "desktop_height",
+      "min": 400,
+      "max": 900,
+      "step": 50,
+      "unit": "px",
+      "label": "Desktop height",
+      "default": 500
+    },
+    {
+      "type": "header",
+      "content": "Content Position"
+    },
+    {
+      "type": "select",
+      "id": "desktop_content_position",
+      "options": [
+        {
+          "value": "top",
+          "label": "Top"
+        },
+        {
+          "value": "middle",
+          "label": "Middle"
+        },
+        {
+          "value": "bottom",
+          "label": "Bottom"
+        }
+      ],
+      "default": "middle",
+      "label": "Vertical position"
+    },
+    {
+      "type": "select",
+      "id": "desktop_content_alignment",
+      "options": [
+        {
+          "value": "left-most",
+          "label": "Left Most (edge to edge)"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "middle-left",
+          "label": "Middle Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "middle-right",
+          "label": "Middle Right"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        },
+        {
+          "value": "right-most",
+          "label": "Right Most (edge to edge)"
+        }
+      ],
+      "default": "center",
+      "label": "Horizontal alignment",
+      "info": "Choose content position across the banner width"
+    },
+    {
+      "type": "range",
+      "id": "content_max_width",
+      "min": 400,
+      "max": 1200,
+      "step": 50,
+      "unit": "px",
+      "label": "Content max width",
+      "default": 800,
+      "info": "Maximum width of the text content area"
+    },
+    {
+      "type": "header",
+      "content": "Button Styling"
+    },
+    {
+      "type": "range",
+      "id": "button_border_radius",
+      "min": 0,
+      "max": 50,
+      "step": 2,
+      "unit": "px",
+      "label": "Button border radius",
+      "default": 4,
+      "info": "Rounded corners for buttons (0 = square, 50 = fully rounded)"
+    },
+    {
+      "type": "color",
+      "id": "button_primary_bg",
+      "label": "Primary button background",
+      "default": "#121212"
+    },
+    {
+      "type": "color",
+      "id": "button_primary_text",
+      "label": "Primary button text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_secondary_border",
+      "label": "Secondary button border",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_secondary_text",
+      "label": "Secondary button text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Content Padding"
+    },
+    {
+      "type": "range",
+      "id": "content_padding",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Content padding (Desktop)",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "content_padding_mobile",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Content padding (Mobile)",
+      "default": 32
+    },
+    {
+      "type": "header",
+      "content": "Section padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding top",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding bottom",
+      "default": 0
+    }
+  ],
+  "blocks": [
+    {
+      "type": "heading",
+      "name": "Heading",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "richtext",
+          "id": "heading",
+          "default": "<p>Welcome to our loyalty program</p>",
+          "label": "Heading"
+        },
+        {
+          "type": "select",
+          "id": "heading_size",
+          "options": [
+            {
+              "value": "h2",
+              "label": "Small"
+            },
+            {
+              "value": "h1",
+              "label": "Medium"
+            },
+            {
+              "value": "h0",
+              "label": "Large"
+            }
+          ],
+          "default": "h1",
+          "label": "Heading size"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_customer_greeting",
+          "default": false,
+          "label": "Show personalized greeting for logged-in customers"
+        },
+        {
+          "type": "text",
+          "id": "customer_greeting_template",
+          "default": "Hi {customer_name}, you have {points} and {tier} tier",
+          "label": "Customer greeting template",
+          "info": "Use {customer_name} for customer name, {points} for formatted points, {tier} for tier name"
+        }
+      ]
+    },
+    {
+      "type": "caption",
+      "name": "Caption",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "caption",
+          "default": "Earn rewards with every purchase",
+          "label": "Text"
+        },
+        {
+          "type": "select",
+          "id": "text_style",
+          "options": [
+            {
+              "value": "subtitle",
+              "label": "Subtitle"
+            },
+            {
+              "value": "caption-with-letter-spacing",
+              "label": "Caption with letter spacing"
+            }
+          ],
+          "default": "subtitle",
+          "label": "Text style"
+        },
+        {
+          "type": "select",
+          "id": "text_size",
+          "options": [
+            {
+              "value": "small",
+              "label": "Small"
+            },
+            {
+              "value": "medium",
+              "label": "Medium"
+            },
+            {
+              "value": "large",
+              "label": "Large"
+            }
+          ],
+          "default": "medium",
+          "label": "Text size"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_customer_subtitle",
+          "default": false,
+          "label": "Show different subtitle for logged-in customers"
+        },
+        {
+          "type": "text",
+          "id": "customer_subtitle",
+          "default": "Welcome back! Continue earning points and unlocking exclusive rewards.",
+          "label": "Customer subtitle"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "Text",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "richtext",
+          "id": "text",
+          "default": "<p>Join our loyalty program and get rewarded for every purchase.</p>",
+          "label": "Description"
+        },
+        {
+          "type": "select",
+          "id": "text_style",
+          "options": [
+            {
+              "value": "body",
+              "label": "Body"
+            },
+            {
+              "value": "subtitle",
+              "label": "Subtitle"
+            }
+          ],
+          "default": "body",
+          "label": "Text style"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_customer_text",
+          "default": false,
+          "label": "Show different text for logged-in customers"
+        },
+        {
+          "type": "richtext",
+          "id": "customer_text",
+          "default": "<p>Keep shopping to unlock more rewards!</p>",
+          "label": "Customer text"
+        }
+      ]
+    },
+    {
+      "type": "buttons",
+      "name": "Buttons",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "select",
+          "id": "button_size",
+          "label": "Button Size",
+          "options": [
+            {
+              "value": "x-small",
+              "label": "Extra Small"
+            },
+            {
+              "value": "small",
+              "label": "Small"
+            },
+            {
+              "value": "medium",
+              "label": "Medium"
+            },
+            {
+              "value": "large",
+              "label": "Large"
+            },
+            {
+              "value": "x-large",
+              "label": "Extra Large"
+            }
+          ],
+          "default": "medium"
+        },
+        {
+          "type": "header",
+          "content": "Button 1"
+        },
+        {
+          "type": "text",
+          "id": "button_label_1",
+          "default": "Shop Now",
+          "label": "Button 1 label"
+        },
+        {
+          "type": "url",
+          "id": "button_link_1",
+          "label": "Button 1 link"
+        },
+        {
+          "type": "checkbox",
+          "id": "button_style_secondary_1",
+          "default": false,
+          "label": "Use outline button style for Button 1"
+        },
+        {
+          "type": "header",
+          "content": "Button 2"
+        },
+        {
+          "type": "text",
+          "id": "button_label_2",
+          "default": "Learn More",
+          "label": "Button 2 label"
+        },
+        {
+          "type": "url",
+          "id": "button_link_2",
+          "label": "Button 2 link"
+        },
+        {
+          "type": "checkbox",
+          "id": "button_style_secondary_2",
+          "default": true,
+          "label": "Use outline button style for Button 2"
+        },
+        {
+          "type": "header",
+          "content": "Customer Button (Logged-in users)"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_customer_buttons",
+          "default": false,
+          "label": "Show different button for logged-in customers"
+        },
+        {
+          "type": "text",
+          "id": "customer_button_label",
+          "default": "View Rewards",
+          "label": "Customer button label"
+        },
+        {
+          "type": "url",
+          "id": "customer_button_link",
+          "label": "Customer button link"
+        },
+        {
+          "type": "checkbox",
+          "id": "customer_button_style_secondary",
+          "default": false,
+          "label": "Use outline button style for customer button"
+        }
+      ]
+    },
+    {
+      "type": "footer_link",
+      "name": "Footer Link",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "footer_text",
+          "default": "Got Questions?",
+          "label": "Footer link text",
+          "info": "Text for the footer link (e.g., 'Got Questions?', 'Need Help?')"
+        },
+        {
+          "type": "url",
+          "id": "footer_link",
+          "label": "Footer link URL",
+          "info": "Where the footer link should go"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Joy: Hero Banner",
+      "blocks": [
+        {
+          "type": "heading"
+        },
+        {
+          "type": "text"
+        },
+        {
+          "type": "buttons"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

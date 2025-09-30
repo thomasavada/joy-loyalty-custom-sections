@@ -1,0 +1,1149 @@
+{% comment %}
+  Joy Loyalty - VIP Tiers Section
+  This section displays VIP tier information in a table format
+{% endcomment %}
+
+<div class="joy-vip-tiers-section" data-section-id="{{ section.id }}">
+  <style>
+    .joy-vip-tiers-container {
+      max-width: {{ section.settings.max_width | default: 1200 }}px;
+      margin: 0 auto;
+      padding: {{ section.settings.section_padding | default: 60 }}px 24px;
+      background: {{ section.settings.background_color | default: 'transparent' }};
+      font-family: inherit;
+    }
+
+    .joy-tiers-header {
+      text-align: {{ section.settings.header_alignment | default: 'center' }};
+      margin-bottom: {{ section.settings.header_margin_bottom | default: 48 }}px;
+    }
+
+    .joy-tiers-title {
+      font-size: {{ section.settings.title_size | default: 32 }}px;
+      color: {{ section.settings.title_color | default: '#000000' }};
+      margin: 0 0 12px 0;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .joy-tiers-subtitle {
+      font-size: {{ section.settings.subtitle_size | default: 16 }}px;
+      color: {{ section.settings.subtitle_color | default: '#666666' }};
+      margin: 0;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    .joy-tiers-table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-top: 32px;
+      border-radius: {{ section.settings.table_border_radius | default: 8 }}px;
+    }
+
+    .joy-tiers-table-wrapper::-webkit-scrollbar {
+      height: 10px;
+    }
+
+    .joy-tiers-table-wrapper::-webkit-scrollbar-track {
+      background: {{ section.settings.scrollbar_track_color | default: '#f1f1f1' }};
+      border-radius: 5px;
+    }
+
+    .joy-tiers-table-wrapper::-webkit-scrollbar-thumb {
+      background: {{ section.settings.scrollbar_thumb_color | default: '#888888' }};
+      border-radius: 5px;
+    }
+
+    .joy-tiers-table-wrapper::-webkit-scrollbar-thumb:hover {
+      background: {{ section.settings.scrollbar_thumb_hover_color | default: '#555555' }};
+    }
+
+    /* Force scrollbar to always be visible */
+    .joy-tiers-table-wrapper {
+      scrollbar-width: thin;
+      scrollbar-color: {{ section.settings.scrollbar_thumb_color | default: '#888888' }} {{ section.settings.scrollbar_track_color | default: '#f1f1f1' }};
+    }
+
+    .joy-tiers-table {
+      width: 100%;
+      min-width: 600px;
+      table-layout: fixed;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: {{ section.settings.table_background | default: '#FFFFFF' }};
+      border: {{ section.settings.table_border_width | default: 1 }}px solid {{ section.settings.table_border_color | default: '#DDDDDD' }};
+      {% if section.settings.show_box_shadow %}
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+      {% endif %}
+      border-radius: {{ section.settings.table_border_radius | default: 8 }}px;
+      overflow: hidden;
+    }
+
+    .joy-tiers-table thead {
+      background: {{ section.settings.header_background | default: '#F5F5F5' }};
+    }
+
+    .joy-tiers-table thead tr {
+      border-bottom: {{ section.settings.row_border_width | default: 1 }}px solid {{ section.settings.row_border_color | default: '#DDDDDD' }};
+    }
+
+    .joy-tiers-table thead th {
+      padding: {{ section.settings.cell_padding | default: 16 }}px;
+      text-align: center;
+      font-weight: 600;
+      font-size: {{ section.settings.header_font_size | default: 14 }}px;
+      white-space: nowrap;
+      position: relative;
+      border-right: {{ section.settings.cell_border_width | default: 1 }}px solid {{ section.settings.cell_border_color | default: '#DDDDDD' }};
+    }
+
+    .joy-tiers-table thead th:first-child {
+      text-align: left;
+      font-weight: 500;
+      color: {{ section.settings.label_color | default: '#666666' }};
+      width: 150px;
+    }
+
+    .joy-tiers-table thead th:last-child {
+      border-right: none;
+    }
+
+    .joy-tier-header-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .joy-tier-icon {
+      width: {{ section.settings.tier_icon_size | default: 48 }}px;
+      height: {{ section.settings.tier_icon_size | default: 48 }}px;
+      object-fit: contain;
+      margin-bottom: 4px;
+    }
+
+    .joy-tier-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: {{ section.settings.badge_background | default: '#EEEEEE' }};
+      color: {{ section.settings.badge_color | default: '#000000' }};
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: {{ section.settings.badge_font_size | default: 13 }}px;
+      margin-bottom: 4px;
+    }
+
+    .joy-tier-requirement {
+      font-size: {{ section.settings.requirement_font_size | default: 12 }}px;
+      color: {{ section.settings.tier_desc_color | default: '#666666' }};
+      font-weight: 400;
+    }
+
+    .joy-tier-current {
+      background: {{ section.settings.current_tier_background | default: '#F9F9F9' }};
+      position: relative;
+    }
+
+    .joy-tier-current th {
+      background: {{ section.settings.current_tier_background | default: '#F9F9F9' }};
+    }
+
+    .joy-tier-current::before {
+      content: '{{ section.settings.current_tier_label | default: 'Your Current Tier' }}';
+      position: absolute;
+      top: -8px;
+      right: 8px;
+      background: {{ section.settings.current_tier_badge_background | default: '#000000' }};
+      color: {{ section.settings.current_tier_badge_color | default: '#FFFFFF' }};
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .joy-tiers-table tbody tr {
+      border-bottom: {{ section.settings.row_border_width | default: 1 }}px solid {{ section.settings.row_border_color | default: '#DDDDDD' }};
+    }
+
+    .joy-tiers-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .joy-tiers-table tbody td {
+      padding: {{ section.settings.cell_padding | default: 16 }}px;
+      text-align: center;
+      font-size: {{ section.settings.cell_font_size | default: 14 }}px;
+      color: {{ section.settings.cell_text_color | default: '#333333' }} !important;
+      vertical-align: top;
+      border-right: {{ section.settings.cell_border_width | default: 1 }}px solid {{ section.settings.cell_border_color | default: '#DDDDDD' }};
+    }
+
+    .joy-tiers-table tbody td * {
+      color: inherit;
+    }
+
+    .joy-tiers-table tbody td:first-child {
+      text-align: left;
+      font-weight: 500;
+      color: {{ section.settings.label_color | default: '#666666' }} !important;
+    }
+
+    .joy-tiers-table tbody td:last-child {
+      border-right: none;
+    }
+
+    .joy-check-icon {
+      color: {{ section.settings.check_icon_color | default: '#00AA00' }} !important;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .joy-cross-icon {
+      color: {{ section.settings.cross_icon_color | default: '#DD0000' }} !important;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+
+    .joy-error-state {
+      background: #FFF3E0;
+      border: 2px solid #FFB74D;
+      border-radius: {{ section.settings.table_border_radius | default: 12 }}px;
+      padding: 24px;
+      text-align: center;
+      color: #E65100;
+      margin: 20px 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .joy-vip-tiers-container {
+        padding: {{ section.settings.section_padding_mobile | default: 40 }}px 16px;
+      }
+
+      .joy-tiers-title {
+        font-size: {{ section.settings.title_size_mobile | default: 24 }}px;
+      }
+
+      {% if section.settings.mobile_responsive_mode == 'scroll' or section.settings.mobile_responsive_mode == blank %}
+      /* Scroll mode - horizontal scrolling */
+      .joy-tiers-table-wrapper {
+        margin-left: -16px;
+        margin-right: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .joy-tiers-table-wrapper::-webkit-scrollbar {
+        height: 10px;
+      }
+
+      .joy-tiers-table {
+        min-width: 650px;
+      }
+
+      .joy-tiers-table thead th:first-child,
+      .joy-tiers-table tbody td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background: inherit;
+      }
+
+      .joy-tiers-table thead th:first-child {
+        background: {{ section.settings.header_background | default: '#F5F5F5' }};
+      }
+
+      .joy-tiers-table tbody td:first-child {
+        background: {{ section.settings.table_background | default: '#FFFFFF' }};
+        font-weight: 600;
+      }
+      {% endif %}
+
+      {% if section.settings.mobile_responsive_mode == 'stack' %}
+      /* Stack mode - vertical stacking */
+      .joy-tiers-table-wrapper {
+        overflow-x: visible;
+      }
+
+      .joy-tiers-table {
+        display: block;
+        min-width: auto;
+      }
+
+      .joy-tiers-table thead {
+        display: none;
+      }
+
+      .joy-tiers-table tbody,
+      .joy-tiers-table tr,
+      .joy-tiers-table td {
+        display: block;
+        width: 100%;
+      }
+
+      .joy-tiers-table tr {
+        margin-bottom: 20px;
+        border: {{ section.settings.table_border_width | default: 1 }}px solid {{ section.settings.table_border_color | default: '#DDDDDD' }};
+        border-radius: {{ section.settings.table_border_radius | default: 8 }}px;
+        overflow: hidden;
+      }
+
+      .joy-tiers-table tbody td {
+        text-align: left !important;
+        padding: 12px 16px;
+        border-right: none !important;
+        border-bottom: 1px solid {{ section.settings.row_border_color | default: '#DDDDDD' }};
+      }
+
+      .joy-tiers-table tbody td:last-child {
+        border-bottom: none;
+      }
+
+      .joy-tiers-table tbody td:first-child {
+        background: {{ section.settings.header_background | default: '#F5F5F5' }};
+        font-weight: 700;
+        font-size: 14px;
+      }
+      {% endif %}
+
+      .joy-tiers-table thead th,
+      .joy-tiers-table tbody td {
+        padding: {{ section.settings.cell_padding_mobile | default: 12 }}px 8px;
+        font-size: {{ section.settings.cell_font_size_mobile | default: 12 }}px;
+      }
+
+      .joy-tier-icon {
+        width: {{ section.settings.tier_icon_size | default: 48 | divided_by: 1.5 }}px;
+        height: {{ section.settings.tier_icon_size | default: 48 | divided_by: 1.5 }}px;
+      }
+
+      .joy-tier-badge {
+        font-size: {{ section.settings.badge_font_size_mobile | default: 11 }}px;
+        padding: 3px 8px;
+      }
+
+      .joy-tier-requirement {
+        font-size: {{ section.settings.requirement_font_size_mobile | default: 10 }}px;
+      }
+    }
+  </style>
+
+  <div class="joy-vip-tiers-container">
+    {% if section.settings.show_header %}
+    <div class="joy-tiers-header">
+      {% if section.settings.title != blank %}
+        <h2 class="joy-tiers-title">{{ section.settings.title }}</h2>
+      {% endif %}
+      {% if section.settings.subtitle != blank %}
+        <div class="joy-tiers-subtitle">{{ section.settings.subtitle }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <joy-vip-tiers-table
+      data-section-id="{{ section.id }}"
+      data-customer-id="{{ customer.id | default: '' }}"
+    >
+    </joy-vip-tiers-table>
+  </div>
+</div>
+
+<script>
+if (!customElements.get('joy-vip-tiers-table')) {
+  customElements.define('joy-vip-tiers-table', class JoyVipTiersTable extends HTMLElement {
+    constructor() {
+      super();
+      this.sectionId = this.dataset.sectionId;
+      this.customerId = this.dataset.customerId;
+      this.currentCustomerTier = null;
+    }
+
+    connectedCallback() {
+      console.log('Joy VIP Tiers Table component connected for section:', this.sectionId);
+      this.tierSettings = null;
+      this.initializeJoyIntegration();
+    }
+
+    initializeJoyIntegration() {
+      window.addEventListener('joy:ready', () => {
+        console.log('joy:ready event received for VIP tiers table');
+        this.loadTiers();
+      });
+
+      if (window.joyInstance) {
+        console.log('Joy instance already available for VIP tiers table');
+        this.loadTiers();
+      }
+    }
+
+    async fetchTierSettings() {
+      // Try to get tier settings from AVADA_JOY first
+      if (window.AVADA_JOY?.tierSettings) {
+        return window.AVADA_JOY.tierSettings;
+      }
+
+      // Otherwise try to get from programs endpoint
+      if (window.AVADA_JOY?.program?.tierSettings) {
+        return window.AVADA_JOY.program.tierSettings;
+      }
+
+      // Default to points-based if not available
+      return {entryMethod: 'pointEarned'};
+    }
+
+    async loadTiers() {
+      const joyInstance = window.joyInstance;
+
+      if (!joyInstance) {
+        console.log('Joy instance not available on window.joyInstance');
+        this.showError('Joy SDK not loaded');
+        return;
+      }
+
+      if (typeof joyInstance.tiers !== 'function') {
+        console.warn('tiers method not available on Joy instance');
+        this.showError('Joy SDK not properly initialized');
+        return;
+      }
+
+      try {
+        // Get tier settings to know entry method
+        this.tierSettings = await this.fetchTierSettings();
+        console.log('Tier settings:', this.tierSettings);
+
+        // Get customer tier if logged in
+        if (window.AVADA_JOY?.customer?.vipTier?.tierName) {
+          this.currentCustomerTier = window.AVADA_JOY.customer.vipTier.tierName;
+        }
+
+        // Fetch tiers data
+        const tiersData = await joyInstance.tiers();
+        console.log('Joy tiers data:', tiersData);
+
+        if (tiersData && Array.isArray(tiersData) && tiersData.length > 0) {
+          // Filter out inactive tiers and sort by position and targetPoint
+          const activeTiers = tiersData
+            .filter(tier => !tier.inactive)
+            .sort((a, b) => {
+              // First try to sort by targetPoint (points required)
+              const aPoints = a.targetPoint || 0;
+              const bPoints = b.targetPoint || 0;
+              if (aPoints !== bPoints) {
+                return aPoints - bPoints;
+              }
+
+              // If targetPoint is the same, sort by position
+              const aPos = a.position !== undefined ? a.position : 999;
+              const bPos = b.position !== undefined ? b.position : 999;
+              return aPos - bPos;
+            });
+
+          if (activeTiers.length > 0) {
+            this.renderTiersTable(activeTiers);
+          } else {
+            console.log('No active VIP tiers found');
+            this.showError('No VIP tiers configured');
+          }
+        } else {
+          console.log('No VIP tiers found');
+          this.showError('No VIP tiers configured');
+        }
+      } catch (error) {
+        console.error('Error fetching tiers:', error);
+        this.showError('Error loading VIP tiers: ' + (error.message || 'Unknown error'));
+      }
+    }
+
+    renderTiersTable(tiers) {
+      // Get configured row names from settings
+      const rowSettings = this.getRowSettings();
+
+      // Build table header
+      const showIcons = {{ section.settings.show_tier_icons | default: true }};
+      let headerHtml = '<tr><th></th>';
+      tiers.forEach(tier => {
+        const isCurrentTier = this.currentCustomerTier === tier.name;
+        const iconHtml = (showIcons && tier.imageBlock) ? `<img src="${this.escapeHtml(tier.imageBlock)}" alt="${this.escapeHtml(tier.name)}" class="joy-tier-icon" />` : '';
+
+        headerHtml += `
+          <th class="${isCurrentTier ? 'joy-tier-current' : ''}">
+            <div class="joy-tier-header-content">
+              ${iconHtml}
+              <div class="joy-tier-badge">${this.escapeHtml(tier.name)}</div>
+              <div class="joy-tier-requirement">
+                ${this.formatTierRequirement(tier)}
+              </div>
+            </div>
+          </th>
+        `;
+      });
+      headerHtml += '</tr>';
+
+      // Build table rows
+      let rowsHtml = '';
+      rowSettings.forEach(rowSetting => {
+        if (rowSetting.label) {
+          rowsHtml += `<tr><td>${rowSetting.label}</td>`;
+          
+          tiers.forEach((tier) => {
+            const cellContent = this.getCellContent(tier, rowSetting.index);
+            const isCurrentTier = this.currentCustomerTier === tier.name;
+            rowsHtml += `<td class="${isCurrentTier ? 'joy-tier-current' : ''}">${cellContent}</td>`;
+          });
+          
+          rowsHtml += '</tr>';
+        }
+      });
+
+      // Render complete table
+      this.innerHTML = `
+        <div class="joy-tiers-table-wrapper">
+          <table class="joy-tiers-table">
+            <thead>
+              ${headerHtml}
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+    }
+
+    getRowSettings() {
+      // Get row settings from section configuration (up to 10 rows)
+      const rowSettings = [];
+      {% for i in (1..10) %}
+        {% assign row_setting_name = 'row_' | append: i | append: '_name' %}
+        {% if section.settings[row_setting_name] and section.settings[row_setting_name] != '' %}
+          rowSettings.push({
+            index: {{ i | minus: 1 }},
+            label: `{{ section.settings[row_setting_name] }}`
+          });
+        {% endif %}
+      {% endfor %}
+      return rowSettings;
+    }
+
+    getCellContent(tier, rowIndex) {
+      // Get content from tier's contentPerk array by index
+      if (tier.contentPerk && Array.isArray(tier.contentPerk) && tier.contentPerk[rowIndex]) {
+        const content = tier.contentPerk[rowIndex];
+
+        // Wrap check and cross marks with appropriate classes for styling
+        if (content === '✓') {
+          return '<span class="joy-check-icon">✓</span>';
+        } else if (content === '✗') {
+          return '<span class="joy-cross-icon">✗</span>';
+        }
+
+        return content;
+      }
+
+      // Return empty dash if no content available
+      return '—';
+    }
+
+    getDefaultCellContent(tierIndex, rowIndex) {
+      // Generate default content based on tier position and row index
+      const tierDefaults = [
+        // Tier 1 (index 0)
+        ['100 points', '500 points', '20 points', '✓', '✗', '✗', '✗', '✗', '✗', '✗'],
+        // Tier 2 (index 1)  
+        ['100 points', '100 points', '30 points', '✓', '✓', '✗', '✗', '✗', '✗', '✗'],
+        // Tier 3 (index 2)
+        ['100 points', '150 points', '40 points', '✓', '✓', '✓', '✗', '✗', '✗', '✗'],
+        // Tier 4+ (index 3+)
+        ['100 points', '200 points', '50 points', '✓', '✓', '✓', '✓', '✓', '✗', '✗']
+      ];
+
+      const defaultTierIndex = Math.min(tierIndex, 3);
+      const defaultRow = tierDefaults[defaultTierIndex];
+      
+      if (defaultRow && defaultRow[rowIndex] !== undefined) {
+        const content = defaultRow[rowIndex];
+        if (content === '✓') {
+          return '<span class="joy-check-icon">✓</span>';
+        } else if (content === '✗') {
+          return '<span class="joy-cross-icon">✗</span>';
+        }
+        return content;
+      }
+      
+      return '—';
+    }
+
+    formatTierRequirement(tier) {
+      const entryMethod = this.tierSettings?.entryMethod || 'pointEarned';
+      const targetValue = tier.targetPoint || 0;
+
+      if (targetValue === 0) {
+        return 'Free to join';
+      }
+
+      // Format based on entry method
+      switch (entryMethod) {
+        case 'pointEarned':
+          return `${targetValue}+ points`;
+
+        case 'moneySpent':
+        case 'moneySpentLifetime':
+        case 'moneySpentB2B':
+          // Get currency from shop or default to USD
+          const currency = window.AVADA_JOY?.shop?.currency || 'USD';
+          const formatter = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+          });
+          return `${formatter.format(targetValue)}+ spent`;
+
+        case 'numberOfOrders':
+          const orderText = targetValue === 1 ? 'order' : 'orders';
+          return `${targetValue}+ ${orderText}`;
+
+        default:
+          // Fallback to points if unknown entry method
+          return `${targetValue}+ points`;
+      }
+    }
+
+    escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    showError(message) {
+      this.innerHTML = `
+        <div class="joy-error-state">
+          <h3>Unable to Load Tiers</h3>
+          <p>${this.escapeHtml(message)}</p>
+        </div>
+      `;
+    }
+  });
+}
+</script>
+
+{% schema %}
+{
+  "name": "Joy: VIP Tiers Table",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_header",
+      "label": "Show Header",
+      "default": true
+    },
+    {
+      "type": "richtext",
+      "id": "title",
+      "label": "Title",
+      "default": "<p><strong>VIP Tier Benefits</strong></p>"
+    },
+    {
+      "type": "richtext",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "<p>Unlock exclusive rewards and perks as you shop. Each tier offers more benefits to enhance your shopping experience.</p>"
+    },
+    {
+      "type": "select",
+      "id": "header_alignment",
+      "label": "Header Alignment",
+      "options": [
+        {"value": "left", "label": "Left"},
+        {"value": "center", "label": "Center"},
+        {"value": "right", "label": "Right"}
+      ],
+      "default": "center"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_tier_icons",
+      "label": "Show Tier Icons",
+      "default": true,
+      "info": "Display tier icons/images above tier names in the table header"
+    },
+    {
+      "type": "header",
+      "content": "Mobile Settings"
+    },
+    {
+      "type": "select",
+      "id": "mobile_responsive_mode",
+      "label": "Mobile Display Mode",
+      "options": [
+        {"value": "scroll", "label": "Horizontal Scroll (with sticky first column)"},
+        {"value": "stack", "label": "Stack Vertically (each row becomes a card)"}
+      ],
+      "default": "scroll",
+      "info": "Choose how the table displays on mobile devices"
+    },
+    {
+      "type": "header",
+      "content": "Table Rows (Configure up to 10 rows)"
+    },
+    {
+      "type": "text",
+      "id": "row_1_name",
+      "label": "Row 1 Name",
+      "default": "Welcome gift",
+      "info": "Leave blank to hide this row"
+    },
+    {
+      "type": "text",
+      "id": "row_2_name",
+      "label": "Row 2 Name",
+      "default": "Cashback",
+      "info": "Leave blank to hide this row"
+    },
+    {
+      "type": "text",
+      "id": "row_3_name",
+      "label": "Row 3 Name",
+      "default": "Birthday Perks",
+      "info": "Leave blank to hide this row"
+    },
+    {
+      "type": "text",
+      "id": "row_4_name",
+      "label": "Row 4 Name",
+      "info": "Leave blank to hide this row"
+    },
+    {
+      "type": "text",
+      "id": "row_5_name",
+      "label": "Row 5 Name",
+      "info": "Leave blank to hide this row"
+    },
+    {
+      "type": "text",
+      "id": "row_6_name",
+      "label": "Row 6 Name",
+      "info": "Leave blank to hide this row"
+    },
+    {
+      "type": "text",
+      "id": "row_7_name",
+      "label": "Row 7 Name",
+      "info": "Leave blank to hide this row"
+    },
+    {
+      "type": "text",
+      "id": "row_8_name",
+      "label": "Row 8 Name",
+      "info": "Leave blank to hide this row"
+    },
+    {
+      "type": "text",
+      "id": "row_9_name",
+      "label": "Row 9 Name",
+      "info": "Leave blank to hide this row"
+    },
+    {
+      "type": "text",
+      "id": "row_10_name",
+      "label": "Row 10 Name",
+      "info": "Leave blank to hide this row"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "min": 800,
+      "max": 1600,
+      "step": 100,
+      "unit": "px",
+      "label": "Maximum Width",
+      "default": 1200
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "min": 20,
+      "max": 100,
+      "step": 10,
+      "unit": "px",
+      "label": "Section Padding",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "section_padding_mobile",
+      "min": 20,
+      "max": 80,
+      "step": 10,
+      "unit": "px",
+      "label": "Section Padding Mobile",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "header_margin_bottom",
+      "min": 20,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Header Bottom Margin",
+      "default": 48
+    },
+    {
+      "type": "header",
+      "content": "Table Styling"
+    },
+    {
+      "type": "color",
+      "id": "table_background",
+      "label": "Table Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "header_background",
+      "label": "Header Background",
+      "default": "#F5F5F5"
+    },
+    {
+      "type": "range",
+      "id": "table_border_width",
+      "min": 0,
+      "max": 5,
+      "step": 1,
+      "unit": "px",
+      "label": "Table Border Width",
+      "default": 1,
+      "info": "Set to 0 to hide table border"
+    },
+    {
+      "type": "color",
+      "id": "table_border_color",
+      "label": "Table Border Color",
+      "default": "#DDDDDD"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_box_shadow",
+      "label": "Show Box Shadow",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "row_border_width",
+      "min": 0,
+      "max": 5,
+      "step": 1,
+      "unit": "px",
+      "label": "Row Border Width",
+      "default": 1,
+      "info": "Set to 0 to hide row borders"
+    },
+    {
+      "type": "color",
+      "id": "row_border_color",
+      "label": "Row Border Color",
+      "default": "#DDDDDD"
+    },
+    {
+      "type": "range",
+      "id": "cell_border_width",
+      "min": 0,
+      "max": 5,
+      "step": 1,
+      "unit": "px",
+      "label": "Cell Border Width",
+      "default": 1,
+      "info": "Set to 0 to hide cell borders"
+    },
+    {
+      "type": "color",
+      "id": "cell_border_color",
+      "label": "Cell Border Color",
+      "default": "#DDDDDD"
+    },
+    {
+      "type": "range",
+      "id": "table_border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Table Border Radius",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "cell_padding",
+      "min": 12,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Cell Padding",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "cell_padding_mobile",
+      "min": 8,
+      "max": 16,
+      "step": 2,
+      "unit": "px",
+      "label": "Cell Padding Mobile",
+      "default": 12
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "min": 24,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Title Size",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "title_size_mobile",
+      "min": 20,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Title Size Mobile",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size",
+      "min": 14,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Subtitle Size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "header_font_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Table Header Font Size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "cell_font_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Table Cell Font Size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "cell_font_size_mobile",
+      "min": 10,
+      "max": 14,
+      "step": 1,
+      "unit": "px",
+      "label": "Table Cell Font Size Mobile",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "tier_icon_size",
+      "min": 24,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Tier Icon Size",
+      "default": 48,
+      "info": "Size of tier icons/images displayed above tier names"
+    },
+    {
+      "type": "range",
+      "id": "badge_font_size",
+      "min": 11,
+      "max": 16,
+      "step": 1,
+      "unit": "px",
+      "label": "Tier Badge Font Size",
+      "default": 13
+    },
+    {
+      "type": "range",
+      "id": "badge_font_size_mobile",
+      "min": 10,
+      "max": 14,
+      "step": 1,
+      "unit": "px",
+      "label": "Tier Badge Font Size Mobile",
+      "default": 11
+    },
+    {
+      "type": "range",
+      "id": "requirement_font_size",
+      "min": 10,
+      "max": 14,
+      "step": 1,
+      "unit": "px",
+      "label": "Requirement Font Size",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "requirement_font_size_mobile",
+      "min": 9,
+      "max": 12,
+      "step": 1,
+      "unit": "px",
+      "label": "Requirement Font Size Mobile",
+      "default": 10
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Section Background",
+      "default": "rgba(0,0,0,0)"
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Title Color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "subtitle_color",
+      "label": "Subtitle Color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "cell_text_color",
+      "label": "Table Cell Text Color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "label_color",
+      "label": "Row Label Color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "badge_background",
+      "label": "Tier Badge Background",
+      "default": "#EEEEEE"
+    },
+    {
+      "type": "color",
+      "id": "badge_color",
+      "label": "Tier Badge Text Color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "tier_desc_color",
+      "label": "Tier Description Color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "check_icon_color",
+      "label": "Check Icon Color",
+      "default": "#00AA00"
+    },
+    {
+      "type": "color",
+      "id": "cross_icon_color",
+      "label": "Cross Icon Color",
+      "default": "#DD0000"
+    },
+    {
+      "type": "header",
+      "content": "Scrollbar Colors"
+    },
+    {
+      "type": "color",
+      "id": "scrollbar_track_color",
+      "label": "Scrollbar Track Color",
+      "default": "#f1f1f1",
+      "info": "Background color of the scrollbar track"
+    },
+    {
+      "type": "color",
+      "id": "scrollbar_thumb_color",
+      "label": "Scrollbar Thumb Color",
+      "default": "#888888",
+      "info": "Color of the scrollbar handle"
+    },
+    {
+      "type": "color",
+      "id": "scrollbar_thumb_hover_color",
+      "label": "Scrollbar Thumb Hover Color",
+      "default": "#555555",
+      "info": "Color of the scrollbar handle on hover"
+    },
+    {
+      "type": "header",
+      "content": "Current Tier Highlighting"
+    },
+    {
+      "type": "color",
+      "id": "current_tier_background",
+      "label": "Current Tier Background",
+      "default": "#F9F9F9"
+    },
+    {
+      "type": "color",
+      "id": "current_tier_badge_background",
+      "label": "Current Tier Badge Background",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "current_tier_badge_color",
+      "label": "Current Tier Badge Text Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "text",
+      "id": "current_tier_label",
+      "label": "Current Tier Label",
+      "default": "Your Current Tier"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Joy VIP Tiers Table"
+    }
+  ]
+}
+{% endschema %}

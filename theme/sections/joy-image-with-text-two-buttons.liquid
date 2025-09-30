@@ -117,7 +117,7 @@
   }
 
   .image-with-text__content {
-    padding: 2rem 1.5rem;
+    padding: {{ section.settings.content_padding_mobile | default: 32 }}px {{ section.settings.content_padding_mobile | default: 24 }}px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -127,6 +127,7 @@
 
   @media screen and (min-width: 750px) {
     .image-with-text__content {
+      padding: {{ section.settings.content_padding | default: 48 }}px {{ section.settings.content_padding | default: 48 }}px;
       min-height: 500px;
     }
   }
@@ -202,6 +203,30 @@
     flex-wrap: wrap;
     gap: 12px;
     margin-top: 20px;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .image-with-text__content--desktop-center .image-with-text__buttons {
+    justify-content: center !important;
+  }
+
+  .image-with-text__content--desktop-right .image-with-text__buttons {
+    justify-content: flex-end !important;
+  }
+
+  @media screen and (max-width: 749px) {
+    .image-with-text__content--mobile-left .image-with-text__buttons {
+      align-items: flex-start;
+    }
+
+    .image-with-text__content--mobile-center .image-with-text__buttons {
+      align-items: center;
+    }
+
+    .image-with-text__content--mobile-right .image-with-text__buttons {
+      align-items: flex-end;
+    }
   }
 
   .image-with-text__button {
@@ -210,16 +235,52 @@
   }
 
   .button {
-    display: inline-block;
-    padding: 1rem 2rem;
-    font-size: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     font-weight: 600;
     text-decoration: none;
-    border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
     border: 2px solid transparent;
     text-align: center;
+  }
+
+  /* Button Size Variants */
+  .section-{{ section.id }} .button--x-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    border-radius: 2px;
+  }
+
+  .section-{{ section.id }} .button--small {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    border-radius: 3px;
+  }
+
+  .section-{{ section.id }} .button--medium {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    border-radius: 4px;
+  }
+
+  .section-{{ section.id }} .button--large {
+    padding: 1.25rem 2.5rem;
+    font-size: 1.125rem;
+    border-radius: 5px;
+  }
+
+  .section-{{ section.id }} .button--x-large {
+    padding: 1.5rem 3rem;
+    font-size: 1.25rem;
+    border-radius: 6px;
+  }
+
+  .section-{{ section.id }} .button::before,
+  .section-{{ section.id }} .button::after {
+    display: none !important;
+    content: none !important;
   }
 
   .section-{{ section.id }} .button--primary {
@@ -242,11 +303,6 @@
     opacity: 0.85;
   }
 
-  .button[aria-disabled="true"] {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
   .placeholder-svg {
     width: 100%;
     height: 100%;
@@ -255,17 +311,18 @@
 
   @media screen and (max-width: 749px) {
     .image-with-text__buttons {
-
       gap: 10px;
+      flex-direction: column;
+      align-items: stretch;
     }
 
     .image-with-text__button {
       width: 100%;
-      text-align: center;
     }
 
     .button {
       width: 100%;
+      display: block;
     }
   }
 {%- endstyle -%}
@@ -313,24 +370,29 @@
           {% case block.type %}
             {%- when 'heading' -%}
               {%- if customer and block.settings.show_customer_greeting -%}
-                <div
-                  class="image-with-text__heading rte {{ block.settings.heading_size }}"
-                  {{ block.shopify_attributes }}
-                >
-                  Hi {{ customer.first_name | default: customer.name | default: 'there' }}, you have
-                  {%- if customer.metafields.avada_joy.point -%}
-                    {{ ' ' }}{%- assign aj_point = customer.metafields.avada_joy.point | split: '' -%}
+                {%- assign customer_name = customer.first_name | default: customer.name | default: 'there' -%}
+                {%- assign customer_points = '0' -%}
+                {%- assign formatted_points = '0' -%}
+                {%- if customer.metafields.avada_joy.point -%}
+                  {%- assign customer_points = customer.metafields.avada_joy.point -%}
+                  {%- assign aj_point = customer.metafields.avada_joy.point | split: '' -%}
+                  {%- capture formatted_points -%}
                     {%- for digit in aj_point -%}
                       {%- assign threeFromEnd = aj_point.size | minus: forloop.index | modulo: 3 -%}
                       {%- if threeFromEnd == 2 and forloop.index != 1 -%}{{ digit | prepend: ',' }}{%- else -%}{{ digit }}{%- endif -%}
                     {% endfor %}
-                    {{ ' ' }}{{ aj_point | pluralize: 'point', 'points' }}
-                  {%- else -%}
-                    {{ ' ' }}0 points
-                  {%- endif -%}
-                  {%- if customer.metafields.avada_joy.vipTier.tierName -%}
-                    {{ ' ' }}and {{ customer.metafields.avada_joy.vipTier.tierName }} tier
-                  {%- endif -%}
+                  {%- endcapture -%}
+                {%- endif -%}
+                {%- assign customer_tier = customer.metafields.avada_joy.vipTier.tierName | default: '' -%}
+
+                {%- assign greeting_template = block.settings.customer_greeting_template | default: 'Hi {customer_name}, you have {points} and {tier} tier' -%}
+                {%- assign greeting_output = greeting_template | replace: '{customer_name}', customer_name | replace: '{points}', formatted_points | replace: '{tier}', customer_tier -%}
+
+                <div
+                  class="image-with-text__heading rte {{ block.settings.heading_size }}"
+                  {{ block.shopify_attributes }}
+                >
+                  {{ greeting_output }}
                 </div>
               {%- else -%}
                 <div
@@ -360,6 +422,7 @@
                 {%- endif -%}
               </div>
             {%- when 'buttons' -%}
+              {%- assign button_size_class = 'button--' | append: block.settings.button_size | default: 'medium' -%}
               <div class="image-with-text__buttons" {{ block.shopify_attributes }}>
                 {%- if customer and block.settings.show_customer_buttons -%}
                   {%- comment -%} Buttons for logged-in customers {%- endcomment -%}
@@ -370,7 +433,7 @@
                       {% else %}
                         href="{{ block.settings.customer_button_link }}"
                       {% endif %}
-                      class="button image-with-text__button{% if block.settings.customer_button_style_secondary %} button--secondary{% else %} button--primary{% endif %}"
+                      class="button image-with-text__button {{ button_size_class }}{% if block.settings.customer_button_style_secondary %} button--secondary{% else %} button--primary{% endif %}"
                     >
                       {{ block.settings.customer_button_label | escape }}
                     </a>
@@ -384,7 +447,7 @@
                       {% else %}
                         href="{{ block.settings.button_link_1 }}"
                       {% endif %}
-                      class="button image-with-text__button{% if block.settings.button_style_secondary_1 %} button--secondary{% else %} button--primary{% endif %}"
+                      class="button image-with-text__button {{ button_size_class }}{% if block.settings.button_style_secondary_1 %} button--secondary{% else %} button--primary{% endif %}"
                     >
                       {{ block.settings.button_label_1 | escape }}
                     </a>
@@ -396,7 +459,7 @@
                       {% else %}
                         href="{{ block.settings.button_link_2 }}"
                       {% endif %}
-                      class="button image-with-text__button{% if block.settings.button_style_secondary_2 %} button--secondary{% else %} button--primary{% endif %}"
+                      class="button image-with-text__button {{ button_size_class }}{% if block.settings.button_style_secondary_2 %} button--secondary{% else %} button--primary{% endif %}"
                     >
                       {{ block.settings.button_label_2 | escape }}
                     </a>
@@ -413,7 +476,7 @@
 
 {% schema %}
 {
-  "name": "Image with text + buttons",
+  "name": "Joy: Loyalty Banner",
   "class": "section",
   "disabled_on": {
     "groups": ["header", "footer"]
@@ -519,7 +582,7 @@
           "label": "Bottom"
         }
       ],
-      "default": "top",
+      "default": "middle",
       "label": "Desktop content position"
     },
     {
@@ -539,7 +602,7 @@
           "label": "Right"
         }
       ],
-      "default": "left",
+      "default": "center",
       "label": "Desktop content alignment"
     },
     {
@@ -681,6 +744,32 @@
     },
     {
       "type": "header",
+      "content": "Content Padding"
+    },
+    {
+      "type": "range",
+      "id": "content_padding",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Content padding (Desktop)",
+      "default": 48,
+      "info": "Padding inside the text content area on desktop"
+    },
+    {
+      "type": "range",
+      "id": "content_padding_mobile",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Content padding (Mobile)",
+      "default": 32,
+      "info": "Padding inside the text content area on mobile"
+    },
+    {
+      "type": "header",
       "content": "Section padding"
     },
     {
@@ -741,7 +830,14 @@
           "id": "show_customer_greeting",
           "default": false,
           "label": "Show personalized greeting for logged-in customers",
-          "info": "When enabled, shows customer name, points, and tier instead of the heading text for logged-in customers"
+          "info": "When enabled, shows a personalized greeting instead of the heading text for logged-in customers"
+        },
+        {
+          "type": "text",
+          "id": "customer_greeting_template",
+          "default": "Hi {customer_name}, you have {points} and {tier} tier",
+          "label": "Customer greeting template",
+          "info": "Use {customer_name} for customer name, {points} for formatted points, {tier} for tier name. Example: 'Welcome back {customer_name}! You have {points} points'"
         }
       ]
     },
@@ -855,6 +951,35 @@
       "limit": 1,
       "settings": [
         {
+          "type": "select",
+          "id": "button_size",
+          "label": "Button Size",
+          "options": [
+            {
+              "value": "x-small",
+              "label": "Extra Small"
+            },
+            {
+              "value": "small",
+              "label": "Small"
+            },
+            {
+              "value": "medium",
+              "label": "Medium"
+            },
+            {
+              "value": "large",
+              "label": "Large"
+            },
+            {
+              "value": "x-large",
+              "label": "Extra Large"
+            }
+          ],
+          "default": "medium",
+          "info": "Choose the size for all buttons in this section"
+        },
+        {
           "type": "header",
           "content": "Button 1"
         },
@@ -932,7 +1057,7 @@
   ],
   "presets": [
     {
-      "name": "Image with text + buttons",
+      "name": "Joy: Loyalty Banner",
       "blocks": [
         {
           "type": "heading"
