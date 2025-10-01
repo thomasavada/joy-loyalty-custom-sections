@@ -15,6 +15,7 @@
   --joy-referral-background-color: {{ section.settings.background_color | default: "#f5f5f5" }};
   --joy-referral-card-bg: {{ section.settings.card_background_color | default: "#ffffff" }};
   --joy-referral-button-color: {{ section.settings.button_color | default: "#000000" }};
+  --joy-referral-button-text-color: {{ section.settings.button_text_color | default: "#FFFFFF" }};
   --joy-referral-input-bg: {{ section.settings.input_background_color | default: "#ffffff" }};
   --joy-referral-input-border: {{ section.settings.input_border_color | default: "#000000" }};
   --joy-referral-input-text: {{ section.settings.input_text_color | default: "#333333" }};
@@ -144,7 +145,7 @@
   border: none;
   border-radius: {{ section.settings.input_border_radius | default: 50 }}px;
   background-color: var(--joy-referral-button-color);
-  color: #FFFFFF;
+  color: var(--joy-referral-button-text-color);
   cursor: pointer;
   transition: all 0.3s ease;
   text-transform: capitalize;
@@ -278,7 +279,7 @@
   border: none;
   border-radius: {{ section.settings.input_border_radius | default: 50 }}px;
   background-color: var(--joy-referral-button-color);
-  color: #FFFFFF;
+  color: var(--joy-referral-button-text-color);
   cursor: pointer;
   transition: all 0.3s ease;
   }
@@ -337,7 +338,7 @@
   border: none;
   border-radius: {{ section.settings.input_border_radius | default: 50 }}px;
   background-color: var(--joy-referral-button-color);
-  color: #FFFFFF;
+  color: var(--joy-referral-button-text-color);
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 0.75rem;
@@ -1010,8 +1011,14 @@
     {
       "type": "color",
       "id": "button_color",
-      "label": "Button color",
+      "label": "Button background color",
       "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text color",
+      "default": "#FFFFFF"
     },
     {
       "type": "color",
