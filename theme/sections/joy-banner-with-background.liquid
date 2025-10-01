@@ -73,6 +73,24 @@
   object-position: {{ section.settings.image_position | default: "center" }};
   }
 
+  .banner-with-background__image--mobile {
+  display: block;
+  }
+
+  .banner-with-background__image--desktop {
+  display: none;
+  }
+
+  @media screen and (min-width: 750px) {
+  .banner-with-background__image--mobile {
+  display: none;
+  }
+
+  .banner-with-background__image--desktop {
+  display: block;
+  }
+  }
+
   .banner-with-background__overlay {
   position: absolute;
   top: 0;
@@ -384,7 +402,36 @@
 <div class="section-{{ section.id }}-padding">
   <div class="section-{{ section.id }} banner-with-background{% if section.settings.mobile_layout == 'stack' %} banner-with-background--stack-mobile{% endif %}">
     <div class="banner-with-background__image">
-      {%- if section.settings.image != blank -%}
+      {%- if section.settings.mobile_image != blank -%}
+        {%- assign widths = '375, 550, 750, 1100, 1500, 1780, 2000, 3000, 3840' -%}
+        {%- capture sizes -%}
+          100vw
+        {%- endcapture -%}
+        <div class="banner-with-background__image--mobile">
+          {{
+          section.settings.mobile_image
+          | image_url: width: 3840
+          | image_tag: loading: 'lazy', sizes: sizes, widths: widths
+          }}
+        </div>
+        {%- if section.settings.image != blank -%}
+          <div class="banner-with-background__image--desktop">
+            {{
+            section.settings.image
+            | image_url: width: 3840
+            | image_tag: loading: 'lazy', sizes: sizes, widths: widths
+            }}
+          </div>
+        {%- else -%}
+          <div class="banner-with-background__image--desktop">
+            {{
+            section.settings.mobile_image
+            | image_url: width: 3840
+            | image_tag: loading: 'lazy', sizes: sizes, widths: widths
+            }}
+          </div>
+        {%- endif -%}
+      {%- elsif section.settings.image != blank -%}
         {%- assign widths = '375, 550, 750, 1100, 1500, 1780, 2000, 3000, 3840' -%}
         {%- capture sizes -%}
           100vw
@@ -527,7 +574,14 @@
     {
       "type": "image_picker",
       "id": "image",
-      "label": "Background image"
+      "label": "Background image (Desktop)",
+      "info": "Main background image for desktop view"
+    },
+    {
+      "type": "image_picker",
+      "id": "mobile_image",
+      "label": "Background image (Mobile)",
+      "info": "Optional: Different background image for mobile devices. If not set, desktop image will be used."
     },
     {
       "type": "select",
