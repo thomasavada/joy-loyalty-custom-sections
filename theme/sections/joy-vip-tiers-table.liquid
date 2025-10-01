@@ -208,6 +208,14 @@
       font-weight: bold;
     }
 
+    .joy-cell-icon {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
 
     .joy-error-state {
       background: #FFF3E0;
@@ -543,11 +551,32 @@ if (!customElements.get('joy-vip-tiers-table')) {
           return '<span class="joy-cross-icon">✗</span>';
         }
 
+        // Check if content is an image URL
+        if (this.isImageUrl(content)) {
+          return `<img src="${this.escapeHtml(content)}" alt="icon" class="joy-cell-icon" />`;
+        }
+
         return content;
       }
 
       // Return empty dash if no content available
       return '—';
+    }
+
+    isImageUrl(str) {
+      // Check if string is a valid URL and ends with common image extensions
+      if (typeof str !== 'string') return false;
+
+      // Check if it starts with http:// or https://
+      if (!str.startsWith('http://') && !str.startsWith('https://')) {
+        return false;
+      }
+
+      // Check if it ends with common image extensions (case insensitive)
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.ico'];
+      const lowerStr = str.toLowerCase();
+
+      return imageExtensions.some(ext => lowerStr.includes(ext));
     }
 
     getDefaultCellContent(tierIndex, rowIndex) {
