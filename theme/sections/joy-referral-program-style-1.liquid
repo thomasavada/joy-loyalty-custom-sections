@@ -710,8 +710,10 @@
         if (!joyInstance || typeof joyInstance.generateLinkReferral !== 'function') {
           throw new Error('Joy is not available. Please ensure Joy app is installed and enabled.');
         }
-
         const referralData = await joyInstance.generateLinkReferral(email);
+        if (referralData.urlReferral) {
+            referralData.url = referralData.urlReferral
+        }
 
         if (referralData && referralData.url) {
           // Save referral data for guests
