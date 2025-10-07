@@ -634,6 +634,9 @@
         console.log('📞 Calling generateLinkReferral with email:', email);
         const referralData = await joyInstance.generateLinkReferral(email);
         console.log('📋 Referral data received:', referralData);
+        if (referralData.urlReferral) {
+            referralData.url = referralData.urlReferral
+        }
 
         if (referralData && referralData.url) {
           console.log('✨ Saving and showing referral result with URL:', referralData.url);
