@@ -1,0 +1,346 @@
+{% comment %}
+  Section: Loyalty rewards reminder
+  - Previewable in Theme Editor (mock coupon) even if not logged in
+  - Live logic runs only when a customer is logged in
+  - Uses Joy SDK rewardList to surface newest unused coupon and avoids duplicates with /cart.js
+{% endcomment %}
+
+{% if customer or request.design_mode %}
+    {% style %}
+        @keyframes joySlideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        #joy-announce-wrap{
+        position:fixed;
+        left:0; right:0;
+        bottom: {{ section.settings.bottom_offset | default: 8 }}px;
+        z-index: {{ section.settings.z_index | default: 2147483646 }};
+        pointer-events:none;
+        }
+        #joy-announce{
+        pointer-events:auto; position:relative;
+        margin:0 auto;
+        max-width: {{ section.settings.max_width | default: 980 }}px;
+        background:
+        {% if section.settings.use_gradient %}
+            linear-gradient(180deg, {{ section.settings.bg_color }}, {{ section.settings.bg_color_2 }})
+        {% else %}
+            {{ section.settings.bg_color }}
+        {% endif %};
+        color: {{ section.settings.text_color }};
+        border:1px solid rgba(0,0,0,.08);
+        box-shadow:0 8px 24px rgba(0,0,0,.12);
+        border-radius:16px;
+        padding: {{ section.settings.padding | default: 16 }}px;
+        gap:10px;
+        display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+        font-size:14px; line-height:1.35;
+        animation: joySlideUp .22s ease-out;
+        }
+        #joy-announce .joy-emoji{
+        font-size:18px; margin-right:4px;
+        display: {% if section.settings.show_emoji %}inline{% else %}none{% endif %};
+        }
+        #joy-announce .joy-strong{ font-weight:700; }
+        #joy-announce .joy-code{
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        display:inline-block; padding:2px 8px; border-radius:8px; white-space:nowrap;
+        background: {{ section.settings.code_bg }}; color: {{ section.settings.code_text }};
+        border:1px solid rgba(0,0,0,.08);
+        }
+        #joy-announce .joy-cta{
+        display:inline-block; padding:8px 14px; border-radius:999px; font-weight:600; text-decoration:none;
+        border:1px solid rgba(0,0,0,.08);
+        background: {{ section.settings.btn_bg }}; color: {{ section.settings.btn_text }};
+        }
+        #joy-announce .joy-cta:hover{ background: {{ section.settings.btn_bg_hover }}; }
+        #joy-announce .joy-cta:focus{ outline:2px solid {{ section.settings.btn_bg }}; outline-offset:2px; }
+        #joy-announce .joy-dismiss{
+        position:absolute; right:8px; top:8px;
+        width:28px; height:28px; border:none; background:transparent; cursor:pointer;
+        border-radius:6px; color:#666; font-size:18px; line-height:1;
+        }
+        #joy-announce .joy-dismiss:hover{ background:rgba(0,0,0,.06); }
+
+        @media (max-width:640px){
+        #joy-announce{ margin:0 8px; padding: {{ section.settings.padding | default: 16 | minus: 2 }}px; border-radius:14px }
+        #joy-announce .joy-cta{ width:100%; text-align:center }
+        }
+        @media (prefers-reduced-motion:reduce){ #joy-announce{ animation:none } }
+    {% endstyle %}
+
+    {%- assign __template_msg = section.settings.message
+            | default: 'Unused {label} coupon: Use {discount} with code {code}.'
+    -%}
+    {%- assign __button_text = section.settings.button_text | default: 'Apply now' -%}
+
+    <script>
+        (function(){
+            'use strict';
+
+            // ===== Liquid → JS (safe) =====
+            const TEMPLATE_MSG = {{ __template_msg | json }};
+            const BUTTON_TEXT  = {{ __button_text  | json }};
+            const IS_CUSTOMER  = {% if customer %}true{% else %}false{% endif %};
+            const IN_EDITOR    = !!(window.Shopify && window.Shopify.designMode);
+
+            const log = (...args) => { try { console.warn('[Joy coupon bar]:', ...args); } catch(_){} };
+
+            // ===== helpers (shared, guarded) =====
+            async function fetchCart() {
+                try {
+                    const res = await fetch('/cart.js', { credentials: 'same-origin' });
+                    if (!res || !res.ok) return null;
+                    return await res.json();
+                } catch(e) {
+                    log('fetchCart error', e); return null;
+                }
+            }
+            async function getAppliedDiscountCodes() {
+                try {
+                    const cart = await fetchCart();
+                    if (!cart) return [];
+                    return (cart.discount_codes || [])
+                        .map(dc => String(dc?.code || '').toUpperCase())
+                        .filter(Boolean);
+                } catch(e) {
+                    log('getAppliedDiscountCodes error', e); return [];
+                }
+            }
+
+            function createBar(code, label, benefit, messageTemplate, buttonText) {
+                const wrap = document.createElement('div');
+                wrap.id = 'joy-announce-wrap';
+                const bar = document.createElement('div');
+                bar.id = 'joy-announce';
+                bar.setAttribute('role','region');
+                bar.setAttribute('aria-label','Loyalty coupon announcement');
+
+                const msg = (messageTemplate || 'Unused {label} coupon: Use {discount} with code {code}.')
+                    .replace('{label}', label)
+                    .replace('{discount}', benefit)
+                    .replace('{code}', code);
+
+                bar.innerHTML = `
+      <button type="button" class="joy-dismiss" aria-label="Dismiss">×</button>
+      <span class="joy-emoji" aria-hidden="true">🎉</span>
+      <span>${msg}</span>
+      <a class="joy-cta" href="/discount/${encodeURIComponent(code)}">${buttonText || 'Apply now'}</a>
+    `;
+                wrap.appendChild(bar);
+                return { wrap, bar };
+            }
+
+            function addBottomPaddingWhileVisible() {
+                try {
+                    const el = document.documentElement;
+                    const prev = el.style.paddingBottom;
+                    el.style.paddingBottom = '64px';
+                    return () => { try { el.style.paddingBottom = prev || ''; } catch(_){} };
+                } catch(_) { return () => {}; }
+            }
+
+            // ===== Theme Editor preview (works even if not logged in) =====
+            (function editorPreview(){
+                try {
+                    if (!IN_EDITOR) return;
+
+                    const render = () => {
+                        try {
+                            document.getElementById('joy-announce-wrap')?.remove();
+                            const { wrap, bar } = createBar('JOY-PREVIEW10', 'reward', '10% off', TEMPLATE_MSG, BUTTON_TEXT);
+                            document.body.appendChild(wrap);
+
+                            const restorePad = addBottomPaddingWhileVisible();
+                            bar.querySelector('.joy-dismiss')?.addEventListener('click', () => {
+                                try { wrap.remove(); } catch(_){}
+                                restorePad();
+                            });
+                        } catch(e) { log('render preview error', e); }
+                    };
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', render);
+                    } else {
+                        render();
+                    }
+                    document.addEventListener('shopify:section:load', render);
+                    document.addEventListener('shopify:section:select', render);
+                } catch(e) { log('editorPreview error', e); }
+            })();
+
+            // ===== Live logic (runs only when not in editor AND a customer is logged in) =====
+            window.addEventListener('joy:ready', async () => {
+                if (IN_EDITOR) return;
+                if (!IS_CUSTOMER) return;
+                try {
+                    if (document.getElementById('joy-announce-wrap')) return;
+                    if (sessionStorage.getItem('joy_announcement_dismissed') === '1') return;
+
+                    const ji = window.joyInstance || window.joy;
+                    if (!ji) return;
+
+                    const appliedCodes = await getAppliedDiscountCodes();
+
+                    let resp;
+                    try {
+                        resp = await ji.rewardList({ isAvailableCoupon: true });
+                    } catch(e) { log('rewardList error', e); return; }
+
+                    const rewards = Array.isArray(resp?.data) ? resp.data : [];
+                    const unused = rewards
+                        .filter(r => r?.couponCode && !r?.isUsedCode)
+                        .sort((a,b) => { try { return new Date(b.createdAt) - new Date(a.createdAt); } catch(_) { return 0; } });
+
+                    if (!unused.length) return;
+
+                    const latest  = unused[0];
+                    const code    = String(latest?.couponCode || '');
+                    const label   = String(latest?.eventRule || 'reward').replace(/_/g,' ');
+                    const benefit = latest?.programDescription || 'your coupon';
+
+                    if (!code) return;
+                    if (appliedCodes.includes(code.toUpperCase())) return;
+
+                    const { wrap, bar } = createBar(code, label, benefit, TEMPLATE_MSG, BUTTON_TEXT);
+                    document.body.appendChild(wrap);
+
+                    const restorePad = addBottomPaddingWhileVisible();
+
+                    // dismiss (persist for session)
+                    try {
+                        bar.querySelector('.joy-dismiss')?.addEventListener('click', () => {
+                            try { sessionStorage.setItem('joy_announcement_dismissed','1'); } catch(_){}
+                            try { wrap.remove(); } catch(_){}
+                            restorePad();
+                        });
+                    } catch(e) { log('dismiss binding error', e); }
+
+                    // auto-hide if code becomes applied
+                    const maybeHide = async () => {
+                        try {
+                            const nowCodes = await getAppliedDiscountCodes();
+                            if (nowCodes.includes(code.toUpperCase())) {
+                                try { sessionStorage.setItem('joy_announcement_dismissed','1'); } catch(_){}
+                                try { wrap.remove(); } catch(_){}
+                                restorePad();
+                            }
+                        } catch(e) { log('maybeHide error', e); }
+                    };
+
+                    try {
+                        bar.querySelector('.joy-cta')?.addEventListener('click', () => {
+                            try { setTimeout(maybeHide, 1200); } catch(_){}
+                        });
+                    } catch(e) { log('cta binding error', e); }
+
+                    {% if section.settings.auto_check %}
+                    // brief polling window for {{ section.settings.check_interval }}s
+                    try {
+                        let elapsed = 0;
+                        const stepMs = 1000;
+                        const limitMs = {{ section.settings.check_interval | default: 60 | times: 1000 }};
+                        const iv = setInterval(async () => {
+                            try {
+                                elapsed += stepMs;
+                                await maybeHide();
+                                if (elapsed >= limitMs || !document.getElementById('joy-announce-wrap')) clearInterval(iv);
+                            } catch(e) {
+                                clearInterval(iv); log('poll error', e);
+                            }
+                        }, stepMs);
+                    } catch(e) { log('poll setup error', e); }
+                    {% endif %}
+                } catch(e) { log('joy:ready handler error', e); }
+            });
+        })(); // end IIFE
+    </script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Loyalty rewards reminder",
+  "settings": [
+    { "type": "header", "content": "Content" },
+    {
+      "type": "text",
+      "id": "message",
+      "label": "Message",
+      "default": "Unused {label} coupon: Use {discount} with code {code}.",
+      "info": "Placeholders: {label}, {discount}, {code}"
+    },
+    { "type": "text", "id": "button_text", "label": "Button text", "default": "Apply now" },
+    { "type": "checkbox", "id": "show_emoji", "label": "Show emoji", "default": true },
+
+    { "type": "header", "content": "Colors" },
+    { "type": "checkbox", "id": "use_gradient", "label": "Use gradient background", "default": true },
+    { "type": "color", "id": "bg_color", "label": "Background / Gradient start", "default": "#ffffff" },
+    { "type": "color", "id": "bg_color_2", "label": "Gradient end", "default": "#fbfbfb" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#2b2b2b" },
+    { "type": "color", "id": "code_bg", "label": "Code pill background", "default": "#f6f6f6" },
+    { "type": "color", "id": "code_text", "label": "Code pill text", "default": "#111111" },
+    { "type": "color", "id": "btn_bg", "label": "Button background", "default": "#111111" },
+    { "type": "color", "id": "btn_bg_hover", "label": "Button hover background", "default": "#333333" },
+    { "type": "color", "id": "btn_text", "label": "Button text color", "default": "#ffffff" },
+
+    { "type": "header", "content": "Layout" },
+    {
+      "type": "range",
+      "id": "max_width",
+      "min": 680,
+      "max": 1200,
+      "step": 20,
+      "unit": "px",
+      "label": "Card max width",
+      "default": 980
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "min": 12,
+      "max": 32,
+      "step": 4,
+      "unit": "px",
+      "label": "Card padding",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "bottom_offset",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Distance from bottom",
+      "default": 8
+    },
+
+    { "type": "header", "content": "Behavior" },
+    {
+      "type": "checkbox",
+      "id": "auto_check",
+      "label": "Auto-hide if code gets applied (poll for a short time)",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "check_interval",
+      "min": 30,
+      "max": 300,
+      "step": 30,
+      "unit": "s",
+      "label": "Auto-hide window",
+      "default": 60
+    },
+
+    { "type": "header", "content": "Advanced" },
+    {
+      "type": "text",
+      "id": "z_index",
+      "label": "z-index",
+      "default": "2147483646",
+      "info": "Only change if another widget overlaps."
+    }
+  ],
+  "presets": [{ "name": "Loyalty rewards announcement" }]
+}
+{% endschema %}
