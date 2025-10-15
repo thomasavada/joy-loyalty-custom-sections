@@ -137,31 +137,33 @@ if (!customElements.get('joy-rewards-carousel')) {
         <div class="joy-rewards-carousel">
           <div class="joy-rewards-carousel__header">
             <h3 class="joy-rewards-carousel__title">Your Rewards</h3>
-            <div class="joy-rewards-carousel__count">${this.rewards.length} available</div>
+            <div class="joy-rewards-carousel__header-right">
+              <div class="joy-rewards-carousel__count">${this.rewards.length} available</div>
+              <div class="joy-rewards-carousel__nav-buttons">
+                <button
+                  type="button"
+                  class="joy-rewards-carousel__nav joy-rewards-carousel__nav--prev"
+                  aria-label="Previous"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  class="joy-rewards-carousel__nav joy-rewards-carousel__nav--next"
+                  aria-label="Next"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="joy-rewards-carousel__container">
-            <button
-              type="button"
-              class="joy-rewards-carousel__nav joy-rewards-carousel__nav--prev"
-              aria-label="Previous"
-            >
-              ‹
-            </button>
-
             <div class="joy-rewards-carousel__track-wrapper">
               <div class="joy-rewards-carousel__track">
                 ${this.rewards.map(reward => this.renderRewardCard(reward)).join('')}
               </div>
             </div>
-
-            <button
-              type="button"
-              class="joy-rewards-carousel__nav joy-rewards-carousel__nav--next"
-              aria-label="Next"
-            >
-              ›
-            </button>
           </div>
         </div>
       `;
@@ -267,6 +269,9 @@ if (!customElements.get('joy-rewards-carousel')) {
         track.addEventListener('scroll', () => this.updateNavButtons(track));
         // Initial state
         this.updateNavButtons(track);
+
+        // Add drag scrolling support
+        this.initDragScroll(track);
       }
     }
 
@@ -304,6 +309,79 @@ if (!customElements.get('joy-rewards-carousel')) {
         nextBtn.disabled = false;
         nextBtn.style.opacity = '1';
       }
+    }
+
+    initDragScroll(track) {
+      let isDragging = false;
+      let startX = 0;
+      let scrollLeft = 0;
+
+      const handleMouseDown = (e) => {
+        // Only handle left mouse button
+        if (e.button !== 0) return;
+
+        isDragging = true;
+        startX = e.pageX - track.offsetLeft;
+        scrollLeft = track.scrollLeft;
+        track.style.cursor = 'grabbing';
+        track.style.userSelect = 'none';
+      };
+
+      const handleMouseMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+
+        const x = e.pageX - track.offsetLeft;
+        const walk = (x - startX) * 1.5; // Multiplier for scroll speed
+        track.scrollLeft = scrollLeft - walk;
+      };
+
+      const handleMouseUp = () => {
+        isDragging = false;
+        track.style.cursor = 'grab';
+        track.style.userSelect = '';
+      };
+
+      const handleMouseLeave = () => {
+        if (isDragging) {
+          isDragging = false;
+          track.style.cursor = 'grab';
+          track.style.userSelect = '';
+        }
+      };
+
+      // Touch events for mobile
+      const handleTouchStart = (e) => {
+        isDragging = true;
+        startX = e.touches[0].pageX - track.offsetLeft;
+        scrollLeft = track.scrollLeft;
+      };
+
+      const handleTouchMove = (e) => {
+        if (!isDragging) return;
+
+        const x = e.touches[0].pageX - track.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        track.scrollLeft = scrollLeft - walk;
+      };
+
+      const handleTouchEnd = () => {
+        isDragging = false;
+      };
+
+      // Mouse events
+      track.addEventListener('mousedown', handleMouseDown);
+      track.addEventListener('mousemove', handleMouseMove);
+      track.addEventListener('mouseup', handleMouseUp);
+      track.addEventListener('mouseleave', handleMouseLeave);
+
+      // Touch events
+      track.addEventListener('touchstart', handleTouchStart, { passive: true });
+      track.addEventListener('touchmove', handleTouchMove, { passive: true });
+      track.addEventListener('touchend', handleTouchEnd);
+
+      // Set initial cursor
+      track.style.cursor = 'grab';
     }
 
     async handleApply(event) {
@@ -371,21 +449,29 @@ if (!customElements.get('joy-rewards-carousel')) {
     letter-spacing: -0.01em;
   }
 
+  .joy-rewards-carousel__header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
   .joy-rewards-carousel__count {
     font-size: 12px;
     color: var(--joy-rewards-text-secondary);
     font-weight: 400;
   }
 
-  .joy-rewards-carousel__container {
-    position: relative;
+  .joy-rewards-carousel__nav-buttons {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+  }
+
+  .joy-rewards-carousel__container {
+    position: relative;
   }
 
   .joy-rewards-carousel__track-wrapper {
-    flex: 1;
     overflow: hidden;
   }
 
@@ -489,14 +575,14 @@ if (!customElements.get('joy-rewards-carousel')) {
 
   .joy-rewards-carousel__nav {
     flex-shrink: 0;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border: 1px solid var(--joy-rewards-border);
     background: var(--joy-rewards-bg);
     color: var(--joy-rewards-text);
     border-radius: 50%;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 18px;
     line-height: 1;
     display: flex;
     align-items: center;
@@ -574,6 +660,12 @@ if (!customElements.get('joy-rewards-carousel')) {
     .joy-rewards-carousel__apply-btn {
       font-size: 10px;
       padding: 3px 10px;
+    }
+
+    .joy-rewards-carousel__nav {
+      width: 24px;
+      height: 24px;
+      font-size: 16px;
     }
   }
 </style>
