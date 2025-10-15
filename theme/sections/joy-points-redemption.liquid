@@ -1,0 +1,291 @@
+{% comment %}
+  Joy Points Redemption Section
+  Displays a form for customers to redeem their loyalty points
+  for various rewards and discounts
+{% endcomment %}
+
+<!-- Include the redemption form snippet -->
+{% render 'joy-points-redemption-form' %}
+
+<div class="joy-points-redemption-section" data-section-id="{{ section.id }}">
+  <style>
+    .joy-points-redemption-section {
+      max-width: {{ section.settings.max_width | default: 600 }}px;
+      margin: 0 auto;
+      padding: {{ section.settings.section_padding | default: 60 }}px 24px;
+      background: {{ section.settings.background_color | default: '#FFFFFF' }};
+    }
+
+    .joy-points-redemption-header {
+      text-align: {{ section.settings.header_alignment | default: 'center' }};
+      margin-bottom: 32px;
+    }
+
+    .joy-points-redemption-title {
+      font-size: {{ section.settings.title_size | default: 28 }}px;
+      color: {{ section.settings.title_color | default: '#1A1A1A' }};
+      margin: 0 0 8px 0;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .joy-points-redemption-subtitle {
+      font-size: 16px;
+      color: {{ section.settings.subtitle_color | default: '#6B7280' }};
+      margin: 0;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    .joy-points-redemption-container {
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Override form colors from section settings */
+    .joy-points-redemption-section .joy-redemption-form {
+      --joy-redemption-primary: {{ section.settings.primary_color | default: '#D4A574' }};
+      --joy-redemption-border: {{ section.settings.border_color | default: '#E5E7EB' }};
+      --joy-redemption-text: {{ section.settings.text_color | default: '#111827' }};
+      --joy-redemption-text-secondary: {{ section.settings.text_secondary_color | default: '#6B7280' }};
+      --joy-redemption-radius: {{ section.settings.border_radius | default: 8 }}px;
+
+      {% if section.settings.form_background %}
+        background: {{ section.settings.form_background }};
+      {% endif %}
+
+      {% if section.settings.show_form_border %}
+        border: {{ section.settings.form_border_width | default: 1 }}px solid {{ section.settings.border_color | default: '#E5E7EB' }};
+      {% else %}
+        border: none;
+      {% endif %}
+
+      {% if section.settings.form_shadow %}
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      {% endif %}
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .joy-points-redemption-section {
+        padding: {{ section.settings.section_padding_mobile | default: 40 }}px 16px;
+      }
+
+      .joy-points-redemption-title {
+        font-size: 24px;
+      }
+    }
+  </style>
+
+  {% if section.settings.show_header %}
+    <div class="joy-points-redemption-header">
+      <h2 class="joy-points-redemption-title">
+        {{ section.settings.title | default: 'Redeem Your Points' }}
+      </h2>
+      {% if section.settings.subtitle %}
+        <p class="joy-points-redemption-subtitle">
+          {{ section.settings.subtitle }}
+        </p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="joy-points-redemption-container">
+    <joy-points-redemption-form
+      data-section-id="{{ section.id }}"
+      data-customer-id="{{ customer.id | default: '' }}"
+    ></joy-points-redemption-form>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Joy: Points Redemption",
+  "class": "joy-loyalty-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_header",
+      "label": "Show Header",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Redeem Your Points"
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "info": "Optional subtitle text",
+      "default": "Choose a program and enter the points you want to redeem"
+    },
+    {
+      "type": "select",
+      "id": "header_alignment",
+      "label": "Header Alignment",
+      "options": [
+        {"value": "left", "label": "Left"},
+        {"value": "center", "label": "Center"},
+        {"value": "right", "label": "Right"}
+      ],
+      "default": "center"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "min": 400,
+      "max": 800,
+      "step": 50,
+      "unit": "px",
+      "label": "Maximum Width",
+      "default": 600
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "min": 20,
+      "max": 100,
+      "step": 10,
+      "unit": "px",
+      "label": "Section Padding",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "section_padding_mobile",
+      "min": 20,
+      "max": 80,
+      "step": 10,
+      "unit": "px",
+      "label": "Section Padding Mobile",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "min": 20,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Title Size",
+      "default": 28
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Section Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Title Color",
+      "default": "#1A1A1A"
+    },
+    {
+      "type": "color",
+      "id": "subtitle_color",
+      "label": "Subtitle Color",
+      "default": "#6B7280"
+    },
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Primary Color",
+      "default": "#D4A574",
+      "info": "Used for buttons and accents"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#111827"
+    },
+    {
+      "type": "color",
+      "id": "text_secondary_color",
+      "label": "Secondary Text Color",
+      "default": "#6B7280"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#E5E7EB"
+    },
+    {
+      "type": "header",
+      "content": "Form Styling"
+    },
+    {
+      "type": "color",
+      "id": "form_background",
+      "label": "Form Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_form_border",
+      "label": "Show Form Border",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "form_border_width",
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "unit": "px",
+      "label": "Form Border Width",
+      "default": 1
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Border Radius",
+      "default": 8
+    },
+    {
+      "type": "checkbox",
+      "id": "form_shadow",
+      "label": "Show Form Shadow",
+      "default": false,
+      "info": "Add a subtle shadow to the form"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Joy: Points Redemption",
+      "settings": {
+        "show_header": true,
+        "title": "Redeem Your Points",
+        "subtitle": "Choose a program and enter the points you want to redeem"
+      }
+    }
+  ]
+}
+{% endschema %}

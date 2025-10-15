@@ -1,0 +1,1217 @@
+{% comment %}
+  Joy Points Redemption Form Snippet
+  A standalone form component for redeeming loyalty points with program selection
+  Usage: {% render 'joy-points-redemption-form' %}
+{% endcomment %}
+
+<script>
+if (!customElements.get('joy-points-redemption-form')) {
+  class JoyPointsRedemptionForm extends HTMLElement {
+    constructor() {
+      super();
+      this.selectedProgram = null;
+      this.pointsToRedeem = 0;
+      this.redeemPrograms = [];
+      this.cachedCustomer = null;
+      this.isInitialized = false;
+      this.isExpanded = false;
+      this.cartTotal = 0;
+    }
+
+    connectedCallback() {
+      // Read data attributes after element is connected to DOM
+      this.sectionId = this.dataset.sectionId || this.generateId();
+      this.customerId = this.dataset.customerId && this.dataset.customerId !== '' ? this.dataset.customerId : null;
+
+      this.initializeJoyIntegration();
+    }
+
+    disconnectedCallback() {
+      window.removeEventListener('joy:ready', this.handleJoyReady);
+    }
+
+    initializeJoyIntegration() {
+      if (this.isInitialized) return;
+
+      this.handleJoyReady = this.handleJoyReady.bind(this);
+
+      // Listen for Joy ready event
+      window.addEventListener('joy:ready', this.handleJoyReady);
+
+      // Try immediate initialization if Joy is already loaded
+      if (window.joyInstance) {
+        this.handleJoyReady();
+      }
+    }
+
+    async handleJoyReady() {
+      if (this.isInitialized) return;
+
+      try {
+        this.isInitialized = true;
+
+        if (!window.joyInstance) {
+          this.showError('Joy SDK not loaded');
+          return;
+        }
+
+        // Check if customer is logged in
+        if (!this.customerId || this.customerId === '' || this.customerId === 'null' || this.customerId === 'undefined') {
+          this.renderGuestState();
+          return;
+        }
+
+        // Load customer data
+        try {
+          this.cachedCustomer = await window.joyInstance.customer();
+        } catch (error) {
+          console.error('Error loading customer data:', error);
+          // Continue even if customer data load fails
+        }
+
+        // Load redeem programs
+        this.redeemPrograms = await this.loadRedeemPrograms();
+
+        if (!this.redeemPrograms || this.redeemPrograms.length === 0) {
+          this.renderEmptyState('No redemption programs available');
+          return;
+        }
+
+        // Load cart data
+        await this.loadCartData();
+
+        // Render the form
+        this.renderForm();
+      } catch (error) {
+        console.error('Failed to initialize redemption form:', error);
+        this.showError('Unable to load redemption options');
+      }
+    }
+
+    async loadCartData() {
+      try {
+        const response = await fetch('/cart.js');
+        const cart = await response.json();
+        // Cart total is in cents, convert to dollars
+        this.cartTotal = cart.total_price / 100;
+      } catch (error) {
+        console.error('Failed to load cart data:', error);
+        this.cartTotal = 0;
+      }
+    }
+
+    async loadRedeemPrograms() {
+      try {
+        if (!window.joyInstance || typeof window.joyInstance.redeemPrograms !== 'function') {
+          console.warn('redeemPrograms method not available');
+          return [];
+        }
+
+        const response = await window.joyInstance.redeemPrograms();
+        const programs = response?.redeeming || response?.data || response || [];
+
+        // Filter for active programs
+        return programs.filter(program =>
+          program &&
+          program.status &&
+          !program.isDraft &&
+          (program.type === 'redeeming' || program.type === 'spending' || program.redeemType === 'dynamic')
+        );
+      } catch (error) {
+        console.error('Failed to load redeem programs:', error);
+        return [];
+      }
+    }
+
+    getCustomerPoints() {
+      try {
+        // Try cached customer data
+        if (this.cachedCustomer && this.cachedCustomer.point) {
+          return parseInt(this.cachedCustomer.point) || 0;
+        }
+
+        // Try global Joy data
+        if (window.AVADA_JOY?.points) {
+          return parseInt(window.AVADA_JOY.points) || 0;
+        }
+
+        // Try Joy instance
+        if (window.joyInstance?.customer?.point) {
+          return parseInt(window.joyInstance.customer.point) || 0;
+        }
+
+        return 0;
+      } catch (error) {
+        console.error('Error getting customer points:', error);
+        return 0;
+      }
+    }
+
+    getPointTerminology() {
+      return {
+        singular: window.AVADA_JOY?.settings?.pointSingular || 'point',
+        plural: window.AVADA_JOY?.settings?.pointPlural || 'points'
+      };
+    }
+
+    formatPointText(points) {
+      const terminology = this.getPointTerminology();
+      return points === 1 ? terminology.singular : terminology.plural;
+    }
+
+    formatPointsText(points) {
+      return `${points} ${this.formatPointText(points)}`;
+    }
+
+    generateId() {
+      return `joy-redemption-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    renderGuestState() {
+      this.innerHTML = `
+        <div class="joy-redemption-form joy-redemption-form--guest">
+          <div class="joy-redemption-form__guest-message">
+            <p>Please <a href="/account/login" class="joy-redemption-form__login-link">sign in</a> to redeem your points</p>
+          </div>
+        </div>
+      `;
+    }
+
+    renderEmptyState(message) {
+      this.innerHTML = `
+        <div class="joy-redemption-form joy-redemption-form--empty">
+          <div class="joy-redemption-form__empty-message">
+            <p>${message}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    showError(message) {
+      this.innerHTML = `
+        <div class="joy-redemption-form joy-redemption-form--error">
+          <div class="joy-redemption-form__error-message">
+            <p>${message}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    renderForm() {
+      const customerPoints = this.getCustomerPoints();
+      const pointText = this.formatPointsText(customerPoints);
+
+      this.innerHTML = `
+        <div class="joy-redemption-form ${this.isExpanded ? 'joy-redemption-form--expanded' : ''}">
+          <div class="joy-redemption-form__collapsed">
+            <div class="joy-redemption-form__balance">
+              <div class="joy-redemption-form__balance-label">Your balance</div>
+              <div class="joy-redemption-form__balance-value">${pointText}</div>
+            </div>
+            <button
+              type="button"
+              class="joy-redemption-form__expand-button"
+              ${customerPoints === 0 ? 'disabled' : ''}
+            >
+              ${this.isExpanded ? 'Cancel' : 'Redeem points'}
+            </button>
+          </div>
+
+          <div class="joy-redemption-form__expanded-content">
+            <div class="joy-redemption-form__body">
+              <div class="joy-redemption-form__field">
+                <label for="program-select-${this.sectionId}" class="joy-redemption-form__label">
+                  Choose a program
+                </label>
+                <select
+                  id="program-select-${this.sectionId}"
+                  class="joy-redemption-form__select"
+                  ${this.redeemPrograms.length === 0 ? 'disabled' : ''}
+                >
+                  <option value="">Select a program</option>
+                  ${this.redeemPrograms.map(program => this.renderProgramOption(program, customerPoints)).join('')}
+                </select>
+              </div>
+
+              <div class="joy-redemption-form__field joy-redemption-form__points-field" style="display: none;">
+                <div class="joy-redemption-form__input-group">
+                  <label for="points-input-${this.sectionId}" class="joy-redemption-form__input-prefix">
+                    Points
+                  </label>
+                  <button
+                    type="button"
+                    class="joy-redemption-form__input-btn joy-redemption-form__input-btn--minus"
+                    aria-label="Decrease points"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    id="points-input-${this.sectionId}"
+                    class="joy-redemption-form__input joy-redemption-form__input--grouped"
+                    min="0"
+                    max="${customerPoints}"
+                    value="0"
+                    placeholder="0"
+                  />
+                  <button
+                    type="button"
+                    class="joy-redemption-form__input-btn joy-redemption-form__input-btn--plus"
+                    aria-label="Increase points"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div class="joy-redemption-form__summary">
+                <button
+                  type="button"
+                  class="joy-redemption-form__redeem-all"
+                  style="display: none;"
+                  ${customerPoints === 0 ? 'disabled' : ''}
+                >
+                  Redeem all points
+                </button>
+                <div class="joy-redemption-form__value">
+                  $<span id="redemption-value-${this.sectionId}">0</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="joy-redemption-form__apply-button"
+                disabled
+              >
+                Apply
+              </button>
+
+              <div id="redemption-message-${this.sectionId}" class="joy-redemption-form__message" style="display: none;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Attach event listeners
+      this.attachEventListeners();
+    }
+
+    renderProgramOption(program, customerPoints) {
+      const minPoints = this.getMinPointsRequired(program);
+      const canAfford = customerPoints >= minPoints;
+      const isDynamic = program.redeemType === 'dynamic';
+
+      let displayText = program.title;
+
+      if (isDynamic) {
+        displayText += ` - ${this.getDynamicProgramDescription(program)}`;
+      } else {
+        const pointsText = this.formatPointsText(minPoints);
+        displayText += ` - ${pointsText}`;
+      }
+
+      return `
+        <option
+          value="${program.id}"
+          data-program='${JSON.stringify(program).replace(/'/g, "&apos;")}'
+          ${!canAfford ? 'disabled' : ''}
+        >
+          ${displayText}${!canAfford ? ' (Not enough points)' : ''}
+        </option>
+      `;
+    }
+
+    getMinPointsRequired(program) {
+      const isDynamic = program.redeemType === 'dynamic';
+
+      // Try multiple possible field names for points cost
+      let points = program.spendPoint ||
+                   program.pointCost ||
+                   program.points ||
+                   program.cost ||
+                   program.requiredPoints ||
+                   program.minSpendPoint ||
+                   0;
+
+      // If points is still 0, try parsing from title (e.g., "20 dollar off - 200 points")
+      if (points === 0 && program.title) {
+        const titleMatch = program.title.match(/(\d+)\s*points?$/i);
+        if (titleMatch) {
+          points = parseInt(titleMatch[1]);
+        }
+      }
+
+      return isDynamic ? (program.minSpendPoint || points) : points;
+    }
+
+    getDynamicProgramDescription(program) {
+      if (program.typeEarn === 'discount_percentage' || program.discountType === 'percentage') {
+        const percentage = program.earnPercentage || program.discount || 0;
+        return `${percentage}% off`;
+      }
+
+      if (program.typeEarn === 'discount_amount' || program.discountType === 'amount') {
+        const points = program.minSpendPoint || program.spendPoint || 100;
+        const amount = program.earnAmount || program.discount || 0;
+        return `$${amount} for every ${points} ${this.formatPointText(points)}`;
+      }
+
+      const ratio = program.earnAmount || 1;
+      const points = program.spendPoint || 100;
+      return `$${ratio} for every ${points} ${this.formatPointText(points)}`;
+    }
+
+    attachEventListeners() {
+      const expandButton = this.querySelector('.joy-redemption-form__expand-button');
+      const programSelect = this.querySelector(`#program-select-${this.sectionId}`);
+      const pointsInput = this.querySelector(`#points-input-${this.sectionId}`);
+      const redeemAllButton = this.querySelector('.joy-redemption-form__redeem-all');
+      const applyButton = this.querySelector('.joy-redemption-form__apply-button');
+
+      if (expandButton) {
+        expandButton.addEventListener('click', () => this.toggleExpanded());
+      }
+
+      if (programSelect) {
+        programSelect.addEventListener('change', (e) => this.handleProgramChange(e));
+      }
+
+      if (pointsInput) {
+        pointsInput.addEventListener('input', (e) => this.handlePointsChange(e));
+      }
+
+      if (redeemAllButton) {
+        redeemAllButton.addEventListener('click', () => this.handleRedeemAll());
+      }
+
+      if (applyButton) {
+        applyButton.addEventListener('click', () => this.handleApply());
+      }
+
+      // Attach increment/decrement button listeners
+      const minusBtn = this.querySelector('.joy-redemption-form__input-btn--minus');
+      const plusBtn = this.querySelector('.joy-redemption-form__input-btn--plus');
+
+      if (minusBtn) {
+        minusBtn.addEventListener('click', () => this.handlePointsDecrement());
+      }
+
+      if (plusBtn) {
+        plusBtn.addEventListener('click', () => this.handlePointsIncrement());
+      }
+    }
+
+    toggleExpanded() {
+      this.isExpanded = !this.isExpanded;
+      const formElement = this.querySelector('.joy-redemption-form');
+      const expandButton = this.querySelector('.joy-redemption-form__expand-button');
+
+      if (formElement) {
+        if (this.isExpanded) {
+          formElement.classList.add('joy-redemption-form--expanded');
+        } else {
+          formElement.classList.remove('joy-redemption-form--expanded');
+          // Reset form when collapsing
+          this.resetForm();
+        }
+      }
+
+      if (expandButton) {
+        expandButton.textContent = this.isExpanded ? 'Cancel' : 'Redeem points';
+      }
+    }
+
+    async handleProgramChange(event) {
+      const selectedOption = event.target.options[event.target.selectedIndex];
+
+      if (!selectedOption.value) {
+        this.selectedProgram = null;
+        this.pointsToRedeem = 0;
+        this.updateRedemptionValue(0);
+        this.updateApplyButton();
+        this.hidePointsInput();
+        return;
+      }
+
+      try {
+        this.selectedProgram = JSON.parse(selectedOption.dataset.program);
+
+        // Reload cart data to get latest total
+        await this.loadCartData();
+
+        const isDynamic = this.selectedProgram.redeemType === 'dynamic';
+        const pointsInput = this.querySelector(`#points-input-${this.sectionId}`);
+        const pointsField = this.querySelector('.joy-redemption-form__points-field');
+        const redeemAllButton = this.querySelector('.joy-redemption-form__redeem-all');
+
+        if (isDynamic) {
+          // Show points input and redeem all button for dynamic programs
+          if (pointsField) pointsField.style.display = 'flex';
+          if (redeemAllButton) redeemAllButton.style.display = 'block';
+
+          const minPoints = this.getMinPointsRequired(this.selectedProgram);
+          if (pointsInput) {
+            pointsInput.min = minPoints;
+            if (parseInt(pointsInput.value) < minPoints) {
+              pointsInput.value = minPoints;
+              this.pointsToRedeem = minPoints;
+            }
+          }
+        } else {
+          // Hide points input and redeem all button for fixed programs
+          if (pointsField) pointsField.style.display = 'none';
+          if (redeemAllButton) redeemAllButton.style.display = 'none';
+
+          const requiredPoints = this.getMinPointsRequired(this.selectedProgram);
+          this.pointsToRedeem = requiredPoints;
+          if (pointsInput) {
+            pointsInput.value = requiredPoints;
+          }
+        }
+
+        this.calculateRedemptionValue();
+        this.updateApplyButton();
+      } catch (error) {
+        console.error('Failed to parse program data:', error);
+      }
+    }
+
+    hidePointsInput() {
+      const pointsField = this.querySelector('.joy-redemption-form__points-field');
+      const redeemAllButton = this.querySelector('.joy-redemption-form__redeem-all');
+      if (pointsField) pointsField.style.display = 'none';
+      if (redeemAllButton) redeemAllButton.style.display = 'none';
+    }
+
+    handlePointsChange(event) {
+      this.pointsToRedeem = parseInt(event.target.value) || 0;
+      this.calculateRedemptionValue();
+      this.updateApplyButton();
+    }
+
+    handlePointsDecrement() {
+      const pointsInput = this.querySelector(`#points-input-${this.sectionId}`);
+      if (!pointsInput) return;
+
+      const currentValue = parseInt(pointsInput.value) || 0;
+      const minValue = parseInt(pointsInput.min) || 0;
+      const step = this.selectedProgram?.spendPoint || 100; // Use program's point increment or default to 100
+
+      const newValue = Math.max(minValue, currentValue - step);
+      pointsInput.value = newValue;
+      this.pointsToRedeem = newValue;
+      this.calculateRedemptionValue();
+      this.updateApplyButton();
+    }
+
+    handlePointsIncrement() {
+      const pointsInput = this.querySelector(`#points-input-${this.sectionId}`);
+      if (!pointsInput) return;
+
+      const currentValue = parseInt(pointsInput.value) || 0;
+      const maxValue = parseInt(pointsInput.max) || this.getCustomerPoints();
+      const step = this.selectedProgram?.spendPoint || 100; // Use program's point increment or default to 100
+
+      const newValue = Math.min(maxValue, currentValue + step);
+      pointsInput.value = newValue;
+      this.pointsToRedeem = newValue;
+      this.calculateRedemptionValue();
+      this.updateApplyButton();
+    }
+
+    handleRedeemAll() {
+      const customerPoints = this.getCustomerPoints();
+      const pointsInput = this.querySelector(`#points-input-${this.sectionId}`);
+
+      if (pointsInput) {
+        pointsInput.value = customerPoints;
+        this.pointsToRedeem = customerPoints;
+        this.calculateRedemptionValue();
+        this.updateApplyButton();
+      }
+    }
+
+    calculateRedemptionValue() {
+      if (!this.selectedProgram || this.pointsToRedeem === 0) {
+        this.updateRedemptionValue(0);
+        this.hideValueDisplay();
+        return;
+      }
+
+      // Check if this is a percentage discount or non-dollar program
+      const isPercentageDiscount = this.selectedProgram.typeEarn === 'discount_percentage' ||
+                                   this.selectedProgram.discountType === 'percentage' ||
+                                   (this.selectedProgram.title && this.selectedProgram.title.includes('%'));
+
+      // Check if it's a dollar amount discount
+      const isDollarDiscount = this.selectedProgram.typeEarn === 'discount_amount' ||
+                              this.selectedProgram.discountType === 'amount' ||
+                              this.selectedProgram.redeemType === 'dynamic';
+
+      // Hide value display for non-dollar programs (percentage, free gift, free shipping)
+      if (isPercentageDiscount || !isDollarDiscount) {
+        this.hideValueDisplay();
+        return;
+      }
+
+      const isDynamic = this.selectedProgram.redeemType === 'dynamic';
+
+      if (isDynamic) {
+        // Calculate dynamic redemption value
+        const spendPoint = this.selectedProgram.spendPoint || 1;
+        const earnAmount = this.selectedProgram.earnAmount || 1;
+        const value = (this.pointsToRedeem / spendPoint) * earnAmount;
+        this.updateRedemptionValue(value);
+        this.showValueDisplay();
+      } else {
+        // Fixed redemption - try multiple possible field names
+        const requiredPoints = this.selectedProgram.spendPoint || this.selectedProgram.pointCost || 0;
+
+        // Try to extract the discount value from various possible fields
+        let value = this.selectedProgram.earnAmount ||
+                    this.selectedProgram.discount ||
+                    this.selectedProgram.discountAmount ||
+                    this.selectedProgram.discountValue ||
+                    this.selectedProgram.earnPercentage ||
+                    this.selectedProgram.rewardValue ||
+                    this.selectedProgram.value ||
+                    0;
+
+        // If value is still 0, try parsing from title
+        if (value === 0 && this.selectedProgram.title) {
+          // Try "20 dollar off" or "$20 off"
+          let titleMatch = this.selectedProgram.title.match(/(\d+)\s*dollar/i);
+          if (!titleMatch) {
+            titleMatch = this.selectedProgram.title.match(/\$(\d+)/);
+          }
+          if (titleMatch) {
+            value = parseFloat(titleMatch[1]);
+          }
+        }
+
+        // Ensure value is a number
+        if (typeof value !== 'number') {
+          value = parseFloat(value) || 0;
+        }
+
+        this.updateRedemptionValue(value);
+        this.showValueDisplay();
+      }
+    }
+
+    updateRedemptionValue(value) {
+      const valueDisplay = this.querySelector(`#redemption-value-${this.sectionId}`);
+      if (valueDisplay) {
+        // Ensure value is a number
+        const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+        valueDisplay.textContent = numValue.toFixed(2);
+      }
+    }
+
+    hideValueDisplay() {
+      const summarySection = this.querySelector('.joy-redemption-form__summary');
+      if (summarySection) {
+        summarySection.style.display = 'none';
+      }
+    }
+
+    showValueDisplay() {
+      const summarySection = this.querySelector('.joy-redemption-form__summary');
+      if (summarySection) {
+        summarySection.style.display = 'flex';
+      }
+    }
+
+    updateApplyButton() {
+      const applyButton = this.querySelector('.joy-redemption-form__apply-button');
+      const customerPoints = this.getCustomerPoints();
+      const minPoints = this.selectedProgram ? this.getMinPointsRequired(this.selectedProgram) : 0;
+
+      const canRedeem = this.selectedProgram &&
+                       this.pointsToRedeem > 0 &&
+                       this.pointsToRedeem >= minPoints &&
+                       this.pointsToRedeem <= customerPoints;
+
+      if (applyButton) {
+        applyButton.disabled = !canRedeem;
+
+        // Update button text with discount value (only for dollar amount discounts)
+        if (canRedeem && this.selectedProgram) {
+          const isPercentage = this.selectedProgram.typeEarn === 'discount_percentage' ||
+                              this.selectedProgram.discountType === 'percentage' ||
+                              (this.selectedProgram.title && this.selectedProgram.title.includes('%'));
+
+          // Check if it's a dollar amount discount (not free shipping/free gift)
+          const isDollarDiscount = this.selectedProgram.typeEarn === 'discount_amount' ||
+                                  this.selectedProgram.discountType === 'amount' ||
+                                  this.selectedProgram.redeemType === 'dynamic';
+
+          const valueDisplay = this.querySelector(`#redemption-value-${this.sectionId}`);
+          const value = valueDisplay ? parseFloat(valueDisplay.textContent) : 0;
+
+          // Only show amount for dollar discounts (dynamic or fixed amount)
+          if (!isPercentage && isDollarDiscount && value > 0) {
+            applyButton.textContent = `Apply $${value.toFixed(2)}`;
+          } else {
+            applyButton.textContent = 'Apply';
+          }
+        } else {
+          applyButton.textContent = 'Apply';
+        }
+      }
+    }
+
+    extractPercentageFromTitle(title) {
+      if (!title) return 0;
+      const match = title.match(/(\d+)%/);
+      return match ? parseInt(match[1]) : 0;
+    }
+
+    async handleApply() {
+      if (!this.selectedProgram || this.pointsToRedeem === 0) {
+        return;
+      }
+
+      const applyButton = this.querySelector('.joy-redemption-form__apply-button');
+      const originalText = applyButton?.textContent;
+
+      try {
+        // Disable button and show loading
+        if (applyButton) {
+          applyButton.disabled = true;
+          applyButton.innerHTML = `
+            <span style="display: inline-flex; align-items: center; gap: 8px;">
+              <svg class="joy-spinner" width="16" height="16" viewBox="0 0 24 24" style="animation: joy-spin 1s linear infinite;">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4" stroke-dashoffset="10.5"></circle>
+              </svg>
+              Processing...
+            </span>
+          `;
+        }
+
+        if (!window.joyInstance || typeof window.joyInstance.redeem !== 'function') {
+          throw new Error('Joy SDK redeem function not available');
+        }
+
+        // Redeem points
+        // For fixed programs, don't pass the points amount - Joy SDK handles it
+        const isDynamic = this.selectedProgram.redeemType === 'dynamic';
+        let result;
+
+        try {
+          result = isDynamic
+            ? await window.joyInstance.redeem(this.selectedProgram.id, this.pointsToRedeem)
+            : await window.joyInstance.redeem(this.selectedProgram.id);
+        } catch (redeemError) {
+          console.error('Redeem API error:', redeemError);
+          throw new Error(redeemError.message || 'Failed to redeem points');
+        }
+
+        console.log('Redeem result:', result);
+
+        // Check for error in result
+        if (result && result.status === false) {
+          throw new Error(result.error || result.message || 'Redemption failed');
+        }
+
+        // Extract discount code if available
+        const discountCode = result?.data?.discount?.code ||
+                            result?.discount?.code ||
+                            result?.code ||
+                            result?.data?.code;
+
+        console.log('Discount code:', discountCode);
+
+        // Hide processing state and show success
+        if (applyButton) {
+          applyButton.innerHTML = originalText;
+          applyButton.disabled = false;
+        }
+
+        if (discountCode) {
+          // Apply discount code to cart
+          this.applyDiscountToCart(discountCode);
+        } else {
+          // Show success message without code
+          this.showMessage('success', `Successfully redeemed ${this.formatPointsText(this.pointsToRedeem)}!`);
+
+          // Reload page after 2 seconds to refresh points
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        }
+
+      } catch (error) {
+        console.error('Failed to redeem points:', error);
+        this.showMessage('error', error.message || 'Failed to redeem points. Please try again.');
+
+        // Re-enable button
+        if (applyButton) {
+          applyButton.innerHTML = originalText;
+          applyButton.disabled = false;
+        }
+      }
+    }
+
+    async applyDiscountToCart(discountCode) {
+      try {
+        // Show success message
+        this.showMessage('success', `Successfully redeemed! Applying discount code: ${discountCode}`);
+
+        // Update cart with discount code using Shopify Cart API
+        const response = await fetch('/cart/update.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            attributes: {
+              'discount_code': discountCode
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update cart');
+        }
+
+        // Redirect to checkout with discount code after a brief delay
+        setTimeout(() => {
+          window.location.href = `/checkout?discount=${encodeURIComponent(discountCode)}`;
+        }, 1000);
+
+      } catch (error) {
+        console.error('Failed to apply discount code:', error);
+
+        // Fallback: just redirect to checkout with discount code
+        this.showMessage('success', `Successfully redeemed! Your discount code: ${discountCode}`);
+
+        setTimeout(() => {
+          window.location.href = `/checkout?discount=${encodeURIComponent(discountCode)}`;
+        }, 2000);
+      }
+    }
+
+    showMessage(type, message) {
+      const messageDiv = this.querySelector(`#redemption-message-${this.sectionId}`);
+      if (messageDiv) {
+        messageDiv.className = `joy-redemption-form__message joy-redemption-form__message--${type}`;
+        messageDiv.textContent = message;
+        messageDiv.style.display = 'block';
+
+        // Hide message after 5 seconds
+        setTimeout(() => {
+          messageDiv.style.display = 'none';
+        }, 5000);
+      }
+    }
+
+    showDiscountCode(code) {
+      const messageDiv = this.querySelector(`#redemption-message-${this.sectionId}`);
+      if (messageDiv) {
+        messageDiv.className = 'joy-redemption-form__message joy-redemption-form__message--success';
+        messageDiv.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px; justify-content: space-between;">
+            <span>Your discount code: <strong style="font-family: monospace; font-size: 16px;">${code}</strong></span>
+            <button
+              onclick="navigator.clipboard.writeText('${code}'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 1000)"
+              style="padding: 4px 12px; background: white; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 12px;"
+            >
+              Copy
+            </button>
+          </div>
+        `;
+        messageDiv.style.display = 'block';
+      }
+    }
+
+    resetForm() {
+      const programSelect = this.querySelector(`#program-select-${this.sectionId}`);
+      const pointsInput = this.querySelector(`#points-input-${this.sectionId}`);
+      const applyButton = this.querySelector('.joy-redemption-form__apply-button');
+
+      if (programSelect) programSelect.value = '';
+      if (pointsInput) pointsInput.value = 0;
+      if (applyButton) {
+        applyButton.disabled = true;
+        applyButton.textContent = 'Apply';
+      }
+
+      this.selectedProgram = null;
+      this.pointsToRedeem = 0;
+      this.updateRedemptionValue(0);
+    }
+  }
+
+  // Register the component
+  customElements.define('joy-points-redemption-form', JoyPointsRedemptionForm);
+}
+</script>
+
+<style>
+  .joy-redemption-form {
+    --joy-redemption-primary: #000000;
+    --joy-redemption-border: #DEDEDE;
+    --joy-redemption-text: #000000;
+    --joy-redemption-text-secondary: #999999;
+    --joy-redemption-bg: #FFFFFF;
+
+    font-family: inherit;
+    background: var(--joy-redemption-bg);
+    border: 1px solid var(--joy-redemption-border);
+    padding: 18px;
+    max-width: 380px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Collapsed state - Step 1 */
+  .joy-redemption-form__collapsed {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .joy-redemption-form__balance {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .joy-redemption-form__balance-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--joy-redemption-text-secondary);
+    letter-spacing: 0.01em;
+    margin-bottom: 4px;
+  }
+
+  .joy-redemption-form__balance-value {
+    font-size: 20px;
+    font-weight: 300;
+    color: var(--joy-redemption-text);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .joy-redemption-form__expand-button {
+    background: white;
+    color: var(--joy-redemption-text);
+    border: 1px solid var(--joy-redemption-border);
+    padding: 10px 18px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .joy-redemption-form__expand-button:hover:not(:disabled) {
+    border-color: var(--joy-redemption-text);
+  }
+
+  .joy-redemption-form__expand-button:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+  }
+
+  /* Expanded content - Step 2 - Hidden by default */
+  .joy-redemption-form__expanded-content {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* When expanded */
+  .joy-redemption-form--expanded .joy-redemption-form__expanded-content {
+    max-height: 600px;
+    opacity: 1;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--joy-redemption-border);
+  }
+
+  .joy-redemption-form__body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .joy-redemption-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .joy-redemption-form__label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--joy-redemption-text-secondary);
+    letter-spacing: 0.01em;
+  }
+
+  .joy-redemption-form__select,
+  .joy-redemption-form__input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--joy-redemption-border);
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--joy-redemption-text);
+    background: var(--joy-redemption-bg);
+    transition: all 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Input group with +/- buttons */
+  .joy-redemption-form__input-group {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .joy-redemption-form__input-prefix {
+    padding: 10px 12px;
+    border: 1px solid var(--joy-redemption-border);
+    border-right: none;
+    background: #FAFAFA;
+    color: var(--joy-redemption-text-secondary);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .joy-redemption-form__input--grouped {
+    border-left: none;
+    border-right: none;
+    flex: 1;
+    text-align: center;
+  }
+
+  .joy-redemption-form__input-btn {
+    width: 40px;
+    padding: 10px;
+    border: 1px solid var(--joy-redemption-border);
+    background: var(--joy-redemption-bg);
+    color: var(--joy-redemption-text);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .joy-redemption-form__input-btn:hover:not(:disabled) {
+    background: #FAFAFA;
+  }
+
+  .joy-redemption-form__input-btn:active:not(:disabled) {
+    background: #F0F0F0;
+  }
+
+  .joy-redemption-form__input-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .joy-redemption-form__input-btn--minus {
+    border-right: none;
+  }
+
+  .joy-redemption-form__input-btn--plus {
+    border-left: none;
+  }
+
+  .joy-redemption-form__select {
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23000000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+  }
+
+  .joy-redemption-form__select:focus,
+  .joy-redemption-form__input:focus {
+    outline: none;
+    border-color: var(--joy-redemption-text);
+    box-shadow: 0 0 0 1px var(--joy-redemption-text);
+  }
+
+  .joy-redemption-form__select:disabled,
+  .joy-redemption-form__input:disabled {
+    background: #FAFAFA;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .joy-redemption-form__input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  .joy-redemption-form__input[type="number"]::-webkit-outer-spin-button,
+  .joy-redemption-form__input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .joy-redemption-form__summary {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    margin-top: 2px;
+    border-top: 1px solid var(--joy-redemption-border);
+  }
+
+  .joy-redemption-form__redeem-all {
+    background: none;
+    border: none;
+    color: var(--joy-redemption-text-secondary);
+    font-size: 11px;
+    font-weight: 400;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s ease;
+    letter-spacing: 0.01em;
+  }
+
+  .joy-redemption-form__redeem-all:hover:not(:disabled) {
+    color: var(--joy-redemption-text);
+  }
+
+  .joy-redemption-form__redeem-all:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .joy-redemption-form__value {
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--joy-redemption-text);
+    letter-spacing: -0.02em;
+  }
+
+  .joy-redemption-form__apply-button {
+    width: 100%;
+    padding: 12px;
+    background: var(--joy-redemption-primary);
+    color: white;
+    border: none;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    letter-spacing: 0.01em;
+    margin-top: 4px;
+  }
+
+  .joy-redemption-form__apply-button:hover:not(:disabled) {
+    background: #222;
+  }
+
+  .joy-redemption-form__apply-button:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+  }
+
+  .joy-redemption-form__message {
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 10px;
+    border-radius: 4px;
+  }
+
+  .joy-redemption-form__message--success {
+    background: #F0FDF4;
+    color: #166534;
+    border: 1px solid #BBF7D0;
+  }
+
+  .joy-redemption-form__message--error {
+    background: #FEF2F2;
+    color: #DC2626;
+    border: 1px solid #FECACA;
+  }
+
+  /* Guest state */
+  .joy-redemption-form--guest {
+    text-align: center;
+    padding: 28px 20px;
+    background: white;
+  }
+
+  .joy-redemption-form__guest-message p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--joy-redemption-text-secondary);
+    line-height: 1.5;
+  }
+
+  .joy-redemption-form__login-link {
+    color: var(--joy-redemption-text);
+    text-decoration: underline;
+    font-weight: 500;
+  }
+
+  /* Empty state */
+  .joy-redemption-form--empty {
+    text-align: center;
+    padding: 28px 20px;
+    background: white;
+  }
+
+  .joy-redemption-form__empty-message p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--joy-redemption-text-secondary);
+    line-height: 1.5;
+  }
+
+  /* Error state */
+  .joy-redemption-form--error {
+    background: #FEF2F2;
+    border-color: #FECACA;
+    padding: 28px 20px;
+    text-align: center;
+  }
+
+  .joy-redemption-form__error-message p {
+    margin: 0;
+    font-size: 13px;
+    color: #991B1B;
+    line-height: 1.5;
+  }
+
+  /* Spinner animation */
+  @keyframes joy-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .joy-redemption-form {
+      padding: 16px;
+      max-width: 100%;
+    }
+
+    .joy-redemption-form__title {
+      font-size: 13px;
+    }
+
+    .joy-redemption-form__value {
+      font-size: 16px;
+    }
+  }
+</style>
