@@ -608,6 +608,19 @@ if (!customElements.get('joy-vip-tiers-table')) {
       return '—';
     }
 
+    getPointTerminology() {
+      return {
+        singular: window.AVADA_JOY?.settings?.pointSingular || 'point',
+        plural: window.AVADA_JOY?.settings?.pointPlural || 'points'
+      };
+    }
+
+    formatPointText(points) {
+      if (!points || points === 0) return this.getPointTerminology().plural;
+      const { singular, plural } = this.getPointTerminology();
+      return points === 1 ? singular : plural;
+    }
+
     formatTierRequirement(tier) {
       const entryMethod = this.tierSettings?.entryMethod || 'pointEarned';
       const targetValue = tier.targetPoint || 0;
@@ -619,7 +632,7 @@ if (!customElements.get('joy-vip-tiers-table')) {
       // Format based on entry method
       switch (entryMethod) {
         case 'pointEarned':
-          return `${targetValue}+ points`;
+          return `${targetValue}+ ${this.formatPointText(targetValue)}`;
 
         case 'moneySpent':
         case 'moneySpentLifetime':
@@ -640,7 +653,7 @@ if (!customElements.get('joy-vip-tiers-table')) {
 
         default:
           // Fallback to points if unknown entry method
-          return `${targetValue}+ points`;
+          return `${targetValue}+ ${this.formatPointText(targetValue)}`;
       }
     }
 
