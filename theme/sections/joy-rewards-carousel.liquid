@@ -1,0 +1,139 @@
+{% comment %}
+  Joy Rewards Carousel Section
+  Displays customer reward coupons in a horizontal carousel
+{% endcomment %}
+
+<!-- Include the carousel snippet -->
+{% render 'joy-rewards-carousel' %}
+
+<div class="joy-rewards-carousel-section" data-section-id="{{ section.id }}">
+  <style>
+    .joy-rewards-carousel-section {
+      max-width: {{ section.settings.max_width | default: 1200 }}px;
+      margin: 0 auto;
+      padding: {{ section.settings.section_padding | default: 40 }}px 24px;
+      background: {{ section.settings.background_color | default: '#FFFFFF' }};
+    }
+
+    /* Override carousel colors from section settings */
+    .joy-rewards-carousel-section joy-rewards-carousel {
+      --joy-rewards-primary: {{ section.settings.primary_color | default: '#000000' }};
+      --joy-rewards-border: {{ section.settings.border_color | default: '#DEDEDE' }};
+      --joy-rewards-text: {{ section.settings.text_color | default: '#000000' }};
+      --joy-rewards-text-secondary: {{ section.settings.text_secondary_color | default: '#999999' }};
+      --joy-rewards-bg: {{ section.settings.card_background | default: '#FFFFFF' }};
+      --joy-rewards-card-bg: {{ section.settings.card_background_secondary | default: '#F9F9F9' }};
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .joy-rewards-carousel-section {
+        padding: {{ section.settings.section_padding_mobile | default: 24 }}px 16px;
+      }
+    }
+  </style>
+
+  <joy-rewards-carousel
+    data-section-id="{{ section.id }}"
+    data-customer-id="{{ customer.id | default: '' }}"
+  ></joy-rewards-carousel>
+</div>
+
+{% schema %}
+{
+  "name": "Joy: Rewards Carousel",
+  "class": "joy-loyalty-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "min": 800,
+      "max": 1400,
+      "step": 50,
+      "unit": "px",
+      "label": "Maximum Width",
+      "default": 1200
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "min": 20,
+      "max": 100,
+      "step": 10,
+      "unit": "px",
+      "label": "Section Padding",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "section_padding_mobile",
+      "min": 16,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "label": "Section Padding Mobile",
+      "default": 24
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Section Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Primary Color",
+      "default": "#000000",
+      "info": "Used for buttons and accents"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "text_secondary_color",
+      "label": "Secondary Text Color",
+      "default": "#999999"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#DEDEDE"
+    },
+    {
+      "type": "color",
+      "id": "card_background",
+      "label": "Card Background",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "card_background_secondary",
+      "label": "Card Background (Outer)",
+      "default": "#F9F9F9"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Joy: Rewards Carousel",
+      "settings": {
+        "max_width": 1200,
+        "section_padding": 40
+      }
+    }
+  ]
+}
+{% endschema %}

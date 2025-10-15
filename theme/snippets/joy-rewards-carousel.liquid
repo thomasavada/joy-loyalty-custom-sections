@@ -1,0 +1,579 @@
+{% comment %}
+  Joy Rewards Carousel Snippet
+  Displays customer's available reward coupons in a horizontal scrollable carousel
+
+  Usage:
+  {% render 'joy-rewards-carousel' %}
+
+  <joy-rewards-carousel
+    data-customer-id="{{ customer.id | default: '' }}"
+  ></joy-rewards-carousel>
+
+  Features:
+  - Horizontal scrolling carousel with navigation arrows
+  - Shows coupon codes with discount values
+  - Copy-to-clipboard functionality
+  - Expiry date display
+  - Responsive design
+
+  Customization:
+  <style>
+    joy-rewards-carousel {
+      --joy-rewards-primary: #000000;
+      --joy-rewards-border: #DEDEDE;
+      --joy-rewards-text: #000000;
+      --joy-rewards-text-secondary: #999999;
+      --joy-rewards-bg: #FFFFFF;
+      --joy-rewards-card-bg: #F9F9F9;
+    }
+  </style>
+{% endcomment %}
+
+<script>
+if (!customElements.get('joy-rewards-carousel')) {
+  class JoyRewardsCarousel extends HTMLElement {
+    constructor() {
+      super();
+      this.rewards = [];
+      this.isInitialized = false;
+    }
+
+    connectedCallback() {
+      this.sectionId = this.dataset.sectionId || this.generateId();
+      this.customerId = this.dataset.customerId && this.dataset.customerId !== '' ? this.dataset.customerId : null;
+
+      this.initializeJoyIntegration();
+    }
+
+    disconnectedCallback() {
+      window.removeEventListener('joy:ready', this.handleJoyReady);
+    }
+
+    generateId() {
+      return `joy-rewards-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    initializeJoyIntegration() {
+      if (this.isInitialized) return;
+
+      this.handleJoyReady = this.handleJoyReady.bind(this);
+
+      // Listen for Joy ready event
+      window.addEventListener('joy:ready', this.handleJoyReady);
+
+      // Try immediate initialization if Joy is already loaded
+      if (window.joyInstance) {
+        this.handleJoyReady();
+      }
+    }
+
+    async handleJoyReady() {
+      if (this.isInitialized) return;
+
+      try {
+        this.isInitialized = true;
+
+        if (!window.joyInstance) {
+          this.showError('Joy SDK not loaded');
+          return;
+        }
+
+        // Check if customer is logged in
+        if (!this.customerId || this.customerId === '' || this.customerId === 'null' || this.customerId === 'undefined') {
+          this.renderEmptyState();
+          return;
+        }
+
+        // Load rewards
+        await this.loadRewards();
+
+        if (!this.rewards || this.rewards.length === 0) {
+          this.renderEmptyState();
+          return;
+        }
+
+        // Render the carousel
+        this.renderCarousel();
+      } catch (error) {
+        this.showError('Unable to load rewards');
+      }
+    }
+
+    async loadRewards() {
+      try {
+        if (!window.joyInstance || typeof window.joyInstance.rewardList !== 'function') {
+          return;
+        }
+
+        const response = await window.joyInstance.rewardList({
+          isAvailableCoupon: true
+        });
+
+        // Extract coupons from response
+        this.rewards = response?.coupons || response?.data?.coupons || response?.data || [];
+      } catch (error) {
+        this.rewards = [];
+      }
+    }
+
+    renderEmptyState() {
+      this.innerHTML = `
+        <div class="joy-rewards-carousel joy-rewards-carousel--empty">
+          <p class="joy-rewards-carousel__empty-text">No rewards available</p>
+        </div>
+      `;
+    }
+
+    showError(message) {
+      this.innerHTML = `
+        <div class="joy-rewards-carousel joy-rewards-carousel--error">
+          <p class="joy-rewards-carousel__error-text">${message}</p>
+        </div>
+      `;
+    }
+
+    renderCarousel() {
+      this.innerHTML = `
+        <div class="joy-rewards-carousel">
+          <div class="joy-rewards-carousel__header">
+            <h3 class="joy-rewards-carousel__title">Your Rewards</h3>
+            <div class="joy-rewards-carousel__count">${this.rewards.length} available</div>
+          </div>
+
+          <div class="joy-rewards-carousel__container">
+            <button
+              type="button"
+              class="joy-rewards-carousel__nav joy-rewards-carousel__nav--prev"
+              aria-label="Previous"
+            >
+              ‹
+            </button>
+
+            <div class="joy-rewards-carousel__track-wrapper">
+              <div class="joy-rewards-carousel__track">
+                ${this.rewards.map(reward => this.renderRewardCard(reward)).join('')}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="joy-rewards-carousel__nav joy-rewards-carousel__nav--next"
+              aria-label="Next"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Attach event listeners
+      this.attachEventListeners();
+    }
+
+    renderRewardCard(reward) {
+      const code = reward.couponCode || '';
+      const value = this.getRewardValue(reward);
+      const expiresAt = reward.expiredAt;
+      const expiryText = expiresAt ? this.formatExpiry(expiresAt) : '';
+
+      return `
+        <div class="joy-rewards-carousel__card" data-code="${code}">
+          <div class="joy-rewards-carousel__card-inner">
+            <div class="joy-rewards-carousel__card-value">${value}</div>
+            ${expiryText ? `<div class="joy-rewards-carousel__card-expiry">${expiryText}</div>` : ''}
+            <div class="joy-rewards-carousel__card-action">
+              <div class="joy-rewards-carousel__card-code">${code}</div>
+              <button
+                type="button"
+                class="joy-rewards-carousel__apply-btn"
+                data-code="${code}"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    getRewardValue(reward) {
+      const program = reward.program || {};
+
+      // Check event type to determine discount type
+      if (program.event === 'percentage_discount') {
+        const percentage = program.earnAmount || 0;
+        return `${percentage}% OFF`;
+      }
+
+      if (program.event === 'amount_discount') {
+        const amount = program.earnAmount || 0;
+        return `$${parseFloat(amount).toFixed(2)} OFF`;
+      }
+
+      // Fallback: try to extract from programTitle or title
+      const title = reward.programTitle || program.title || '';
+      if (title) {
+        const percentMatch = title.match(/(\d+)%/);
+        if (percentMatch) return `${percentMatch[1]}% OFF`;
+
+        const amountMatch = title.match(/\$(\d+(?:\.\d{2})?)/);
+        if (amountMatch) return `$${amountMatch[1]} OFF`;
+
+        // Try "X dollar off" pattern
+        const dollarMatch = title.match(/(\d+)\s*dollar/i);
+        if (dollarMatch) return `$${dollarMatch[1]} OFF`;
+      }
+
+      return 'REWARD';
+    }
+
+    formatExpiry(expiresAt) {
+      try {
+        const date = new Date(expiresAt);
+        const now = new Date();
+        const daysLeft = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+
+        if (daysLeft < 0) return 'Expired';
+        if (daysLeft === 0) return 'Expires today';
+        if (daysLeft === 1) return 'Expires tomorrow';
+        if (daysLeft < 7) return `Expires in ${daysLeft} days`;
+
+        return `Expires ${date.toLocaleDateString()}`;
+      } catch (error) {
+        return '';
+      }
+    }
+
+    attachEventListeners() {
+      const prevBtn = this.querySelector('.joy-rewards-carousel__nav--prev');
+      const nextBtn = this.querySelector('.joy-rewards-carousel__nav--next');
+      const track = this.querySelector('.joy-rewards-carousel__track');
+      const applyButtons = this.querySelectorAll('.joy-rewards-carousel__apply-btn');
+
+      if (prevBtn && track) {
+        prevBtn.addEventListener('click', () => this.scrollTrack(track, -1));
+      }
+
+      if (nextBtn && track) {
+        nextBtn.addEventListener('click', () => this.scrollTrack(track, 1));
+      }
+
+      applyButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => this.handleApply(e));
+      });
+
+      // Update nav button states on scroll
+      if (track) {
+        track.addEventListener('scroll', () => this.updateNavButtons(track));
+        // Initial state
+        this.updateNavButtons(track);
+      }
+    }
+
+    scrollTrack(track, direction) {
+      const cardWidth = track.querySelector('.joy-rewards-carousel__card').offsetWidth;
+      const gap = 12; // gap between cards
+      const scrollAmount = (cardWidth + gap) * direction;
+
+      track.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+
+    updateNavButtons(track) {
+      const prevBtn = this.querySelector('.joy-rewards-carousel__nav--prev');
+      const nextBtn = this.querySelector('.joy-rewards-carousel__nav--next');
+
+      if (!prevBtn || !nextBtn) return;
+
+      // Check if at start
+      if (track.scrollLeft <= 0) {
+        prevBtn.disabled = true;
+        prevBtn.style.opacity = '0.3';
+      } else {
+        prevBtn.disabled = false;
+        prevBtn.style.opacity = '1';
+      }
+
+      // Check if at end
+      if (track.scrollLeft + track.clientWidth >= track.scrollWidth - 1) {
+        nextBtn.disabled = true;
+        nextBtn.style.opacity = '0.3';
+      } else {
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = '1';
+      }
+    }
+
+    async handleApply(event) {
+      const button = event.currentTarget;
+      const code = button.dataset.code;
+
+      if (!code) return;
+
+      try {
+        button.textContent = 'Applying...';
+        button.disabled = true;
+
+        // Update cart with discount code
+        await fetch('/cart/update.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            attributes: {
+              'discount_code': code
+            }
+          })
+        });
+
+        // Redirect to checkout with discount code
+        window.location.href = `/checkout?discount=${encodeURIComponent(code)}`;
+      } catch (error) {
+        // Fallback: just redirect to checkout with discount code
+        window.location.href = `/checkout?discount=${encodeURIComponent(code)}`;
+      }
+    }
+  }
+
+  customElements.define('joy-rewards-carousel', JoyRewardsCarousel);
+}
+</script>
+
+<style>
+  .joy-rewards-carousel {
+    --joy-rewards-primary: #000000;
+    --joy-rewards-border: #DEDEDE;
+    --joy-rewards-text: #000000;
+    --joy-rewards-text-secondary: #999999;
+    --joy-rewards-bg: #FFFFFF;
+    --joy-rewards-card-bg: #F9F9F9;
+
+    font-family: inherit;
+    padding: 0;
+    margin: 0;
+  }
+
+  .joy-rewards-carousel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .joy-rewards-carousel__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--joy-rewards-text);
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .joy-rewards-carousel__count {
+    font-size: 12px;
+    color: var(--joy-rewards-text-secondary);
+    font-weight: 400;
+  }
+
+  .joy-rewards-carousel__container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .joy-rewards-carousel__track-wrapper {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .joy-rewards-carousel__track {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    padding: 4px 0;
+  }
+
+  .joy-rewards-carousel__track::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+
+  .joy-rewards-carousel__card {
+    flex: 0 0 250px;
+    background: var(--joy-rewards-card-bg);
+    border: 1px solid var(--joy-rewards-border);
+    border-radius: 6px;
+    padding: 12px;
+    position: relative;
+    transition: transform 0.2s ease;
+  }
+
+  .joy-rewards-carousel__card:hover {
+    transform: translateY(-2px);
+  }
+
+  .joy-rewards-carousel__card-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .joy-rewards-carousel__card-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--joy-rewards-primary);
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+
+  .joy-rewards-carousel__card-expiry {
+    font-size: 10px;
+    color: var(--joy-rewards-text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .joy-rewards-carousel__card-action {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .joy-rewards-carousel__card-code {
+    flex: 1;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--joy-rewards-text);
+    font-family: 'Monaco', 'Courier New', monospace;
+    background: var(--joy-rewards-bg);
+    border: 1px dashed var(--joy-rewards-border);
+    padding: 6px;
+    border-radius: 3px;
+    word-break: break-all;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .joy-rewards-carousel__apply-btn {
+    flex-shrink: 0;
+    background: var(--joy-rewards-primary);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .joy-rewards-carousel__apply-btn:hover:not(:disabled) {
+    background: #222;
+  }
+
+  .joy-rewards-carousel__apply-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .joy-rewards-carousel__nav {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--joy-rewards-border);
+    background: var(--joy-rewards-bg);
+    color: var(--joy-rewards-text);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+  }
+
+  .joy-rewards-carousel__nav:hover:not(:disabled) {
+    border-color: var(--joy-rewards-text);
+    background: #FAFAFA;
+  }
+
+  .joy-rewards-carousel__nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  /* Empty state */
+  .joy-rewards-carousel--empty {
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--joy-rewards-card-bg);
+    border: 1px solid var(--joy-rewards-border);
+    border-radius: 8px;
+  }
+
+  .joy-rewards-carousel__empty-text {
+    margin: 0;
+    font-size: 14px;
+    color: var(--joy-rewards-text-secondary);
+  }
+
+  /* Error state */
+  .joy-rewards-carousel--error {
+    text-align: center;
+    padding: 40px 20px;
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: 8px;
+  }
+
+  .joy-rewards-carousel__error-text {
+    margin: 0;
+    font-size: 14px;
+    color: #DC2626;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .joy-rewards-carousel__card {
+      flex: 0 0 160px;
+      padding: 10px;
+    }
+
+    .joy-rewards-carousel__card-value {
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .joy-rewards-carousel__card-expiry {
+      font-size: 9px;
+      margin-bottom: 6px;
+    }
+
+    .joy-rewards-carousel__card-action {
+      gap: 6px;
+    }
+
+    .joy-rewards-carousel__card-code {
+      font-size: 9px;
+      padding: 3px 4px;
+    }
+
+    .joy-rewards-carousel__apply-btn {
+      font-size: 10px;
+      padding: 3px 10px;
+    }
+  }
+</style>

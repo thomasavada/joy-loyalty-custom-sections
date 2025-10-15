@@ -19,6 +19,16 @@ Custom components and sections for Joy Loyalty program that can be styled and co
   ```
 - **Docs:** [POINTS_REDEMPTION_README.md](./POINTS_REDEMPTION_README.md)
 
+**`joy-rewards-carousel.liquid`** ⭐ **New**
+- Horizontal scrolling carousel of available reward coupons
+- Shows coupon codes with values and expiry dates
+- Copy-to-clipboard functionality
+- **Usage:**
+  ```liquid
+  {% render 'joy-rewards-carousel' %}
+  <joy-rewards-carousel data-customer-id="{{ customer.id | default: '' }}"></joy-rewards-carousel>
+  ```
+
 **`joy-earning-programs.liquid`**
 - Display earning opportunities with flexible layouts
 - Grid, list, or card layouts
@@ -48,6 +58,7 @@ Custom components and sections for Joy Loyalty program that can be styled and co
 ### Loyalty Pages
 
 - **`joy-loyalty-hub.liquid`** - Complete loyalty page with earning & redemption
+- **`joy-rewards-carousel.liquid`** - Horizontal carousel of reward coupons ⭐ **New**
 - **`joy-custom-way-to-earn.liquid`** - Legacy earning programs display
 - **`joy-custom-way-to-redeem.liquid`** - Legacy redemption programs display
 - **`joy-points-redemption.liquid`** - Section wrapper for redemption form
@@ -76,8 +87,15 @@ Custom components and sections for Joy Loyalty program that can be styled and co
 ### Cart Drawer Integration
 ```liquid
 <!-- In theme/snippets/cart-drawer.liquid -->
-{% render 'joy-points-redemption-form' %}
 
+<!-- Show available reward coupons -->
+{% render 'joy-rewards-carousel' %}
+<joy-rewards-carousel
+  data-customer-id="{{ customer.id | default: '' }}"
+></joy-rewards-carousel>
+
+<!-- Points redemption form -->
+{% render 'joy-points-redemption-form' %}
 <joy-points-redemption-form
   data-customer-id="{{ customer.id | default: '' }}"
 ></joy-points-redemption-form>
@@ -98,6 +116,14 @@ All components use CSS custom properties for easy theming:
 
 ```liquid
 <style>
+  /* Customize rewards carousel */
+  joy-rewards-carousel {
+    --joy-rewards-primary: #YOUR_COLOR;
+    --joy-rewards-border: #YOUR_COLOR;
+    --joy-rewards-text: #YOUR_COLOR;
+  }
+
+  /* Customize redemption form */
   joy-points-redemption-form .joy-redemption-form {
     --joy-redemption-primary: #YOUR_COLOR;
     --joy-redemption-border: #YOUR_COLOR;
