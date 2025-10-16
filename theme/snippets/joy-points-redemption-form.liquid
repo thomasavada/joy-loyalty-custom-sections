@@ -270,7 +270,7 @@ if (!customElements.get('joy-points-redemption-form')) {
                 </div>
               </div>
 
-              <div class="joy-redemption-form__summary">
+              <div class="joy-redemption-form__summary" style="display: none;">
                 <button
                   type="button"
                   class="joy-redemption-form__redeem-all"
@@ -544,65 +544,20 @@ if (!customElements.get('joy-points-redemption-form')) {
         return;
       }
 
-      // Check if this is a percentage discount or non-dollar program
-      const isPercentageDiscount = this.selectedProgram.typeEarn === 'discount_percentage' ||
-                                   this.selectedProgram.discountType === 'percentage' ||
-                                   (this.selectedProgram.title && this.selectedProgram.title.includes('%'));
+      const isDynamic = this.selectedProgram.redeemType === 'dynamic';
 
-      // Check if it's a dollar amount discount
-      const isDollarDiscount = this.selectedProgram.typeEarn === 'discount_amount' ||
-                              this.selectedProgram.discountType === 'amount' ||
-                              this.selectedProgram.redeemType === 'dynamic';
-
-      // Hide value display for non-dollar programs (percentage, free gift, free shipping)
-      if (isPercentageDiscount || !isDollarDiscount) {
+      // Only show value display for dynamic programs
+      if (!isDynamic) {
         this.hideValueDisplay();
         return;
       }
 
-      const isDynamic = this.selectedProgram.redeemType === 'dynamic';
-
-      if (isDynamic) {
-        // Calculate dynamic redemption value
-        const spendPoint = this.selectedProgram.spendPoint || 1;
-        const earnAmount = this.selectedProgram.earnAmount || 1;
-        const value = (this.pointsToRedeem / spendPoint) * earnAmount;
-        this.updateRedemptionValue(value);
-        this.showValueDisplay();
-      } else {
-        // Fixed redemption - try multiple possible field names
-        const requiredPoints = this.selectedProgram.spendPoint || this.selectedProgram.pointCost || 0;
-
-        // Try to extract the discount value from various possible fields
-        let value = this.selectedProgram.earnAmount ||
-                    this.selectedProgram.discount ||
-                    this.selectedProgram.discountAmount ||
-                    this.selectedProgram.discountValue ||
-                    this.selectedProgram.earnPercentage ||
-                    this.selectedProgram.rewardValue ||
-                    this.selectedProgram.value ||
-                    0;
-
-        // If value is still 0, try parsing from title
-        if (value === 0 && this.selectedProgram.title) {
-          // Try "20 dollar off" or "$20 off"
-          let titleMatch = this.selectedProgram.title.match(/(\d+)\s*dollar/i);
-          if (!titleMatch) {
-            titleMatch = this.selectedProgram.title.match(/\$(\d+)/);
-          }
-          if (titleMatch) {
-            value = parseFloat(titleMatch[1]);
-          }
-        }
-
-        // Ensure value is a number
-        if (typeof value !== 'number') {
-          value = parseFloat(value) || 0;
-        }
-
-        this.updateRedemptionValue(value);
-        this.showValueDisplay();
-      }
+      // Calculate dynamic redemption value
+      const spendPoint = this.selectedProgram.spendPoint || 1;
+      const earnAmount = this.selectedProgram.earnAmount || 1;
+      const value = (this.pointsToRedeem / spendPoint) * earnAmount;
+      this.updateRedemptionValue(value);
+      this.showValueDisplay();
     }
 
     updateRedemptionValue(value) {
