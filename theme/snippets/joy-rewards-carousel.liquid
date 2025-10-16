@@ -203,12 +203,26 @@ if (!customElements.get('joy-rewards-carousel')) {
 
       // Check event type to determine discount type
       if (program.event === 'percentage_discount') {
-        const percentage = program.earnAmount || 0;
+        let percentage = program.earnAmount || 0;
+
+        // For dynamic percentage discounts, calculate based on points redeemed
+        if (program.redeemType === 'dynamic' && reward.redeemPoint && program.spendPoint) {
+          const multiplier = reward.redeemPoint / program.spendPoint;
+          percentage = parseFloat(program.earnAmount || 0) * multiplier;
+        }
+
         return `${percentage}% OFF`;
       }
 
       if (program.event === 'amount_discount') {
-        const amount = program.earnAmount || 0;
+        let amount = program.earnAmount || 0;
+
+        // For dynamic amount discounts, calculate based on points redeemed
+        if (program.redeemType === 'dynamic' && reward.redeemPoint && program.spendPoint) {
+          const multiplier = reward.redeemPoint / program.spendPoint;
+          amount = parseFloat(program.earnAmount || 0) * multiplier;
+        }
+
         return `$${parseFloat(amount).toFixed(2)} OFF`;
       }
 
