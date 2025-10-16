@@ -387,21 +387,21 @@ if (!customElements.get('joy-vip-tiers-cards')) {
         console.log('Joy tiers data:', tiersData);
 
         if (tiersData && Array.isArray(tiersData) && tiersData.length > 0) {
-          // Filter out inactive tiers and sort by targetPoint, then position
+          // Filter out inactive tiers and sort by position first
           const activeTiers = tiersData
             .filter(tier => !tier.inactive)
             .sort((a, b) => {
-              // First try to sort by targetPoint (points required)
-              const aPoints = a.targetPoint || 0;
-              const bPoints = b.targetPoint || 0;
-              if (aPoints !== bPoints) {
-                return aPoints - bPoints;
-              }
-              
-              // If targetPoint is the same, sort by position
+              // Primary sort: by position field
               const aPos = a.position !== undefined ? a.position : 999;
               const bPos = b.position !== undefined ? b.position : 999;
-              return aPos - bPos;
+              if (aPos !== bPos) {
+                return aPos - bPos;
+              }
+
+              // Secondary sort: by targetPoint if positions are equal
+              const aPoints = a.targetPoint || 0;
+              const bPoints = b.targetPoint || 0;
+              return aPoints - bPoints;
             });
           
           if (activeTiers.length > 0) {
@@ -459,15 +459,17 @@ if (!customElements.get('joy-vip-tiers-cards')) {
     }
 
     formatTierPoints(tier) {
+      // If descriptionBlock exists, use it (in uppercase for consistency)
+      if (tier.descriptionBlock && tier.descriptionBlock.trim() !== '') {
+        return `<div class="joy-tier-card-points">${tier.descriptionBlock.toUpperCase()}</div>`;
+      }
+
+      // Otherwise, generate points text
       if (tier.targetPoint && tier.targetPoint > 0) {
         return `<div class="joy-tier-card-points">${tier.targetPoint}+ POINTS</div>`;
       }
-      
-      if (tier.descriptionBlock && tier.descriptionBlock.toLowerCase().includes('free')) {
-        return `<div class="joy-tier-card-points">FREE TO JOIN</div>`;
-      }
-      
-      return `<div class="joy-tier-card-points">MEMBER</div>`;
+
+      return `<div class="joy-tier-card-points">FREE TO JOIN</div>`;
     }
 
     renderTierIcon(tier) {

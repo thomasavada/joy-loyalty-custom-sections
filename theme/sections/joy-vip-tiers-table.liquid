@@ -472,21 +472,21 @@ if (!customElements.get('joy-vip-tiers-table')) {
         console.log('Joy tiers data:', tiersData);
 
         if (tiersData && Array.isArray(tiersData) && tiersData.length > 0) {
-          // Filter out inactive tiers and sort by position and targetPoint
+          // Filter out inactive tiers and sort by position first
           const activeTiers = tiersData
             .filter(tier => !tier.inactive)
             .sort((a, b) => {
-              // First try to sort by targetPoint (points required)
-              const aPoints = a.targetPoint || 0;
-              const bPoints = b.targetPoint || 0;
-              if (aPoints !== bPoints) {
-                return aPoints - bPoints;
-              }
-
-              // If targetPoint is the same, sort by position
+              // Primary sort: by position field
               const aPos = a.position !== undefined ? a.position : 999;
               const bPos = b.position !== undefined ? b.position : 999;
-              return aPos - bPos;
+              if (aPos !== bPos) {
+                return aPos - bPos;
+              }
+
+              // Secondary sort: by targetPoint if positions are equal
+              const aPoints = a.targetPoint || 0;
+              const bPoints = b.targetPoint || 0;
+              return aPoints - bPoints;
             });
 
           if (activeTiers.length > 0) {
@@ -660,6 +660,12 @@ if (!customElements.get('joy-vip-tiers-table')) {
     }
 
     formatTierRequirement(tier) {
+      // If descriptionBlock exists, use it
+      if (tier.descriptionBlock && tier.descriptionBlock.trim() !== '') {
+        return this.escapeHtml(tier.descriptionBlock);
+      }
+
+      // Otherwise, generate requirement text based on entry method
       const entryMethod = this.tierSettings?.entryMethod || 'pointEarned';
       const targetValue = tier.targetPoint || 0;
 
