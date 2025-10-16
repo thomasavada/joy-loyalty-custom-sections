@@ -35,6 +35,7 @@ if (!customElements.get('joy-rewards-carousel')) {
     constructor() {
       super();
       this.rewards = [];
+      this.appliedCodes = [];
       this.isInitialized = false;
     }
 
@@ -47,6 +48,11 @@ if (!customElements.get('joy-rewards-carousel')) {
 
     disconnectedCallback() {
       window.removeEventListener('joy:ready', this.handleJoyReady);
+
+      // Clear polling interval to prevent memory leaks
+      if (this.cartPollInterval) {
+        clearInterval(this.cartPollInterval);
+      }
     }
 
     generateId() {
@@ -84,8 +90,11 @@ if (!customElements.get('joy-rewards-carousel')) {
           return;
         }
 
-        // Load rewards
-        await this.loadRewards();
+        // Load rewards and applied discount codes
+        await Promise.all([
+          this.loadRewards(),
+          this.loadAppliedDiscountCodes()
+        ]);
 
         if (!this.rewards || this.rewards.length === 0) {
           this.renderEmptyState();
@@ -113,6 +122,22 @@ if (!customElements.get('joy-rewards-carousel')) {
         this.rewards = response?.coupons || response?.data?.coupons || response?.data || [];
       } catch (error) {
         this.rewards = [];
+      }
+    }
+
+    async loadAppliedDiscountCodes() {
+      try {
+        const res = await fetch('/cart.js', { credentials: 'same-origin' });
+        if (!res || !res.ok) {
+          this.appliedCodes = [];
+          return;
+        }
+        const cart = await res.json();
+        this.appliedCodes = (cart.discount_codes || [])
+          .map(dc => String(dc?.code || '').toUpperCase())
+          .filter(Boolean);
+      } catch (error) {
+        this.appliedCodes = [];
       }
     }
 
@@ -168,6 +193,9 @@ if (!customElements.get('joy-rewards-carousel')) {
 
       // Attach event listeners
       this.attachEventListeners();
+
+      // Listen for cart updates (Shopify theme events)
+      this.setupCartListeners();
     }
 
     renderRewardCard(reward) {
@@ -175,6 +203,7 @@ if (!customElements.get('joy-rewards-carousel')) {
       const value = this.getRewardValue(reward);
       const expiresAt = reward.expiredAt;
       const expiryText = expiresAt ? this.formatExpiry(expiresAt) : '';
+      const isApplied = this.appliedCodes.includes(code.toUpperCase());
 
       return `
         <div class="joy-rewards-carousel__card" data-code="${code}">
@@ -187,8 +216,9 @@ if (!customElements.get('joy-rewards-carousel')) {
                 type="button"
                 class="joy-rewards-carousel__apply-btn"
                 data-code="${code}"
+                ${isApplied ? 'disabled' : ''}
               >
-                Apply
+                ${isApplied ? 'Applied' : 'Apply'}
               </button>
             </div>
           </div>
@@ -426,6 +456,42 @@ if (!customElements.get('joy-rewards-carousel')) {
         window.location.href = `/checkout?discount=${encodeURIComponent(code)}`;
       }
     }
+
+    async updateButtonStates() {
+      await this.loadAppliedDiscountCodes();
+
+      const applyButtons = this.querySelectorAll('.joy-rewards-carousel__apply-btn');
+      applyButtons.forEach(btn => {
+        const code = btn.dataset.code;
+        if (!code) return;
+
+        const isApplied = this.appliedCodes.includes(code.toUpperCase());
+        if (isApplied && !btn.disabled) {
+          btn.disabled = true;
+          btn.textContent = 'Applied';
+        } else if (!isApplied && btn.disabled && btn.textContent === 'Applied') {
+          btn.disabled = false;
+          btn.textContent = 'Apply';
+        }
+      });
+    }
+
+    setupCartListeners() {
+      // Listen for Shopify cart update events
+      document.addEventListener('cart:updated', () => {
+        this.updateButtonStates();
+      });
+
+      // Listen for custom cart events (some themes use these)
+      document.addEventListener('cart-drawer:updated', () => {
+        this.updateButtonStates();
+      });
+
+      // Fallback: poll every 5 seconds to check for cart changes
+      this.cartPollInterval = setInterval(() => {
+        this.updateButtonStates();
+      }, 5000);
+    }
   }
 
   customElements.define('joy-rewards-carousel', JoyRewardsCarousel);
@@ -581,8 +647,9 @@ if (!customElements.get('joy-rewards-carousel')) {
   }
 
   .joy-rewards-carousel__apply-btn:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    background: #999;
   }
 
   .joy-rewards-carousel__nav {
