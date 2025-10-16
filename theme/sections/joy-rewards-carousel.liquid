@@ -39,6 +39,11 @@
       background: {{ section.settings.background_color | default: '#FFFFFF' }};
     }
 
+    /* Hide section when carousel is hidden (no rewards available) */
+    .joy-rewards-carousel-section:has(joy-rewards-carousel[style*="display: none"]) {
+      display: none;
+    }
+
     /* Override carousel colors from section settings */
     .joy-rewards-carousel-section joy-rewards-carousel {
       --joy-rewards-primary: {{ section.settings.primary_color | default: '#000000' }};

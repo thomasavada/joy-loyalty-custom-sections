@@ -117,11 +117,9 @@ if (!customElements.get('joy-rewards-carousel')) {
     }
 
     renderEmptyState() {
-      this.innerHTML = `
-        <div class="joy-rewards-carousel joy-rewards-carousel--empty">
-          <p class="joy-rewards-carousel__empty-text">No rewards available</p>
-        </div>
-      `;
+      // Hide the entire component when no rewards available
+      this.style.display = 'none';
+      this.innerHTML = '';
     }
 
     showError(message) {
