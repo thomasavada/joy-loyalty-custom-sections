@@ -1,7 +1,43 @@
 {% comment %}
   Joy Redeeming Programs Component
-  High-standard, modular component for displaying and handling redemption programs
-  Extends JoyBaseComponent for consistency and reusability
+  Displays loyalty reward redemption options with modal interactions
+
+  Usage:
+    {% render 'joy-redeeming-programs' %}
+    <joy-redeeming-programs
+      data-customer-id="{{ customer.id | default: '' }}"
+      data-layout="cards"
+      data-show-disabled="false"
+      data-max-programs="8"
+      data-modal-size="medium"
+    ></joy-redeeming-programs>
+
+  Attributes:
+  - data-customer-id: Customer ID (required for redemption)
+  - data-layout: Layout type - "grid", "list", or "cards" (default: "cards")
+  - data-show-disabled: Show programs customer can't afford (default: "true")
+  - data-max-programs: Limit number of programs to display (default: all)
+  - data-modal-size: Modal size - "small", "medium", "large" (default: "medium")
+  - data-modal-cancel-text: Custom cancel button text (default: "Cancel")
+  - data-modal-redeem-text: Custom redeem button text (default: "Redeem")
+
+  Features:
+  - Interactive modal for redemption confirmation
+  - Dynamic point selection for variable reward programs
+  - Real-time value calculation for dynamic rewards
+  - Shows point requirements and discount values
+  - Auto-applies discount codes to checkout
+  - Handles both fixed and dynamic reward types
+  - Responsive modal design
+
+  Customization:
+  <style>
+    joy-redeeming-programs {
+      --joy-primary-color: #YOUR_COLOR;
+      --joy-border-color: #YOUR_COLOR;
+      --joy-text-primary: #YOUR_COLOR;
+    }
+  </style>
 {% endcomment %}
 
 {% render 'joy-base-component' %}

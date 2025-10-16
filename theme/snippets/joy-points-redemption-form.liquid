@@ -1,7 +1,13 @@
 {% comment %}
   Joy Points Redemption Form Snippet
   A standalone form component for redeeming loyalty points with program selection
-  Usage: {% render 'joy-points-redemption-form' %}
+  Usage:
+
+    <!-- Points redemption form -->
+    {% render 'joy-points-redemption-form' %}
+    <joy-points-redemption-form
+      data-customer-id="{{ customer.id | default: '' }}"
+    ></joy-points-redemption-form>
 {% endcomment %}
 
 <script>

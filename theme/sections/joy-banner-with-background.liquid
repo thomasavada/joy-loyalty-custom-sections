@@ -1,3 +1,57 @@
+{% comment %}
+  Joy: Hero Banner with Background Section
+
+  A versatile hero banner section with personalization features for Joy Loyalty customers.
+  Displays different content for logged-in customers vs guests, with flexible layouts and positioning.
+
+  Usage:
+    Add this section through the Theme Editor:
+    1. Go to theme customizer
+    2. Click "Add section"
+    3. Search for "Joy: Hero Banner"
+    4. Configure blocks and settings
+
+  Key Features:
+    - Personalized greetings for logged-in customers (shows name, points, tier)
+    - Separate content/buttons for guests vs logged-in users
+    - Responsive: Overlay or stack layout on mobile
+    - Flexible positioning: 7 horizontal × 3 vertical positions
+    - Customizable overlay color and opacity
+    - Dual CTAs with primary/secondary button styles
+    - Different images for desktop and mobile
+    - Adapt to image height option (desktop)
+    - Optional footer link
+
+  Available Blocks:
+    - Heading: Main title with optional personalized customer greeting
+    - Caption: Subtitle text with different styles for customers
+    - Text: Rich text description with customer variants
+    - Buttons: Dual CTAs with separate sets for guests/customers
+    - Footer Link: Small link at bottom (e.g., "Got Questions?")
+
+  Personalization:
+    When customer is logged in, you can show:
+    - Custom greeting: "Hi {customer_name}, you have {points} points and {tier} tier"
+    - Different subtitle and description text
+    - Different button labels and links
+    Uses customer.metafields.avada_joy for points and tier data
+
+  Customization (Theme Editor):
+    - Background images (desktop and mobile)
+    - Image position (9 alignment options)
+    - Overlay color and opacity
+    - Text color
+    - Mobile layout: overlay or stack
+    - Content positioning: 3 vertical × 7 horizontal positions
+    - Button styling: colors, border radius, sizes (x-small to x-large)
+    - Heights: mobile and desktop
+    - Content padding and max-width
+
+  Mobile Layouts:
+    - Overlay: Text overlays the image (default)
+    - Stack: Image on top, text below with separate background color
+
+{% endcomment %}
 {%- style -%}
   .section-{{ section.id }}-padding {
   padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;

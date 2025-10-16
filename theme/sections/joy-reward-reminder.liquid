@@ -1,8 +1,33 @@
 {% comment %}
-  Section: Loyalty rewards reminder
-  - Previewable in Theme Editor (mock coupon) even if not logged in
-  - Live logic runs only when a customer is logged in
-  - Uses Joy SDK rewardList to surface newest unused coupon and avoids duplicates with /cart.js
+  Joy: Loyalty Rewards Reminder (Fixed Bottom Banner)
+
+  A fixed bottom banner that announces unused reward coupons to logged-in customers.
+  Auto-hides when dismissed or when the coupon is applied to cart.
+
+  Key Features:
+    - Auto-shows newest unused coupon from Joy SDK (rewardList)
+    - Fixed bottom position with slide-up animation
+    - Dismissable: Persists in sessionStorage
+    - Auto-applies coupon: Direct link to /discount/{code}
+    - Auto-hides: When code is applied to cart (optional polling)
+    - Theme Editor preview: Shows mock coupon even when not logged in
+    - Avoids showing coupons already in cart
+
+  Customization (Theme Editor):
+    - Content: Message template with placeholders ({label}, {discount}, {code}), button text, emoji toggle
+    - Colors: Gradient or solid background, text, code pill, button (normal/hover)
+    - Layout: Max width, padding, distance from bottom, z-index
+    - Behavior: Auto-hide polling, check interval (30-300s)
+
+  Use Cases:
+    - Cart page reminder to use available rewards
+    - Site-wide announcement for unused coupons
+    - Checkout conversion optimization
+
+  Technical Notes:
+    - Theme Editor preview: Shows mock coupon for design purposes
+    - Live mode: Only shows for logged-in customers with unused coupons
+    - Session persistence: Dismissed state survives page refreshes
 {% endcomment %}
 
 {% if customer or request.design_mode %}

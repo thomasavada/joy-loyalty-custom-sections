@@ -1,6 +1,41 @@
 {% comment %}
-  Joy Loyalty - VIP Tiers Cards Section
-  This section displays VIP tier information in a card layout
+  Joy: VIP Tiers Cards Section
+
+  Displays VIP tier information in a modern card grid layout.
+  Perfect for visually showcasing tier progression with icons and perks.
+
+  Key Features:
+    - Card grid layout: Responsive grid of tier cards
+    - Tier icons: Displays custom tier images or fallback symbols
+    - Current tier highlighting: Golden border for active tier
+    - Points badge: Shows tier requirements at top of each card
+    - Perk lists: Bullet-point list of benefits per tier
+    - Custom tier colors: Individual background colors for each tier (up to 5)
+    - Optional main CTA: Join button below cards
+    - Hover effects: Cards lift on hover
+    - Responsive: Single column on mobile
+
+  Customization (Theme Editor):
+    - Content: Title, subtitle, main button toggle/text/link
+    - Layout: Max width, section padding, card gap, card sizing
+    - Card Layout: Min width, gap, border radius, padding, min height
+    - Typography: Title, subtitle, card title, perk text, points badge sizes
+    - Icon Settings: Container size, image size, fallback size
+    - Colors: Section background/image, text, title, subtitle, card title, perks, icons
+    - Tier Colors: Individual colors for tiers 1-5
+    - Button Styling: Main button and individual join buttons
+
+  Use Cases:
+    - VIP program landing page with visual appeal
+    - Loyalty page tier showcase
+    - Account page tier progression display
+
+  Technical Notes:
+    - Uses Web Components (joy-vip-tiers-cards)
+    - Fetches tiers via window.joyInstance.tiers()
+    - Reads tier benefits from tier.contentPerk array
+    - Detects current tier from window.AVADA_JOY.customer.vipTier
+    - Supports tier icons from tier.imageBlock or tier.iconCustom
 {% endcomment %}
 
 <div class="joy-vip-tiers-cards-section" data-section-id="{{ section.id }}">

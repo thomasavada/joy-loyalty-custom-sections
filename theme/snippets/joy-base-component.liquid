@@ -1,7 +1,26 @@
 {% comment %}
   Joy Base Component System
-  Provides foundational classes and utilities for all Joy components
-  Follows Avada coding standards and provides maximum flexibility
+  Foundational base class and utilities for all Joy loyalty components
+
+  Usage:
+    {% render 'joy-base-component' %}
+
+  Note: This snippet is automatically included by other Joy components.
+  You typically don't need to render this directly.
+
+  Features:
+  - Base class for all Joy custom elements (JoyBaseComponent)
+  - Common error handling, retry logic, and SDK integration
+  - State management and lifecycle methods
+  - Customer data caching
+  - Utility methods for points formatting, escaping, and logging
+  - Base CSS custom properties for consistent theming
+
+  Architecture:
+  - All Joy components extend this base class
+  - Provides common patterns and standards
+  - Uses Web Components (Custom Elements) for encapsulation
+  - Built-in error recovery and initialization timeout handling
 {% endcomment %}
 
 <script>

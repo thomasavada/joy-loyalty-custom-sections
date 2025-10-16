@@ -1,3 +1,63 @@
+{% comment %}
+  Joy: Loyalty Banner Section (Image with Text & Dual Buttons)
+
+  A flexible two-column section combining image and text content with personalization for Joy Loyalty customers.
+  Perfect for promotional content, feature highlights, or loyalty program information.
+
+  Usage:
+    Add this section through the Theme Editor:
+    1. Go to theme customizer
+    2. Click "Add section"
+    3. Search for "Joy: Loyalty Banner"
+    4. Configure blocks and settings
+
+  Key Features:
+    - Personalized greetings for logged-in customers (shows name, points, tier)
+    - Separate content/buttons for guests vs logged-in users
+    - Flexible column layouts: 7 ratios from equal (50/50) to asymmetric (75/25)
+    - Image placement: Image first or second
+    - Content positioning: 3 vertical × 3 horizontal positions
+    - Dual CTAs with primary/secondary button styles
+    - Image heights: Adapt to image, small (300px), medium (450px), large (600px)
+    - Optional ambient image animation
+    - Customizable button sizes (x-small to x-large)
+    - Color scheme support
+
+  Available Blocks:
+    - Heading: Main title with optional personalized customer greeting
+    - Caption: Subtitle text with different styles for customers
+    - Text: Rich text description with customer variants
+    - Buttons: Dual CTAs with separate sets for guests/customers
+
+  Column Layout Options:
+    - 50% / 50% (Equal)
+    - 42% / 58%
+    - 58% / 42%
+    - 33% / 67%
+    - 67% / 33%
+    - 25% / 75%
+    - 75% / 25%
+
+  Personalization:
+    When customer is logged in, you can show:
+    - Custom greeting: "Hi {customer_name}, you have {points} points and {tier} tier"
+    - Different subtitle and description text
+    - Different button labels and links
+    Uses customer.metafields.avada_joy for points and tier data
+
+  Customization (Theme Editor):
+    - Image selection
+    - Column layout ratio
+    - Image placement (first/second)
+    - Content position (top/middle/bottom)
+    - Content alignment (left/center/right) for desktop and mobile
+    - Image height (adapt, small, medium, large)
+    - Button colors and sizes
+    - Section background color
+    - Content padding and max width
+    - Optional ambient image animation
+
+{% endcomment %}
 {%- style -%}
   .section-{{ section.id }}-padding {
     padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;

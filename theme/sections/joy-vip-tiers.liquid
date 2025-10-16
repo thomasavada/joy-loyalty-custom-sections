@@ -1,6 +1,36 @@
 {% comment %}
-  Joy Loyalty - VIP Tiers Section
-  This section displays VIP tier information in a table format
+  Joy: VIP Tiers Table Section (Basic)
+
+  Displays VIP tier information in a clean table format with tier benefits comparison.
+  Fetches tier data from Joy SDK and highlights customer's current tier.
+
+  Key Features:
+    - Table layout: Comparison table with tiers as columns, benefits as rows
+    - Current tier highlighting: Visual indication of customer's active tier
+    - Configurable rows: Up to 10 customizable benefit rows
+    - Dynamic content: Fetches tier data from Joy SDK (contentPerk array)
+    - Tier requirements: Shows points/spending/orders needed for each tier
+    - Responsive: Horizontal scrolling on mobile
+
+  Customization (Theme Editor):
+    - Content: Title, subtitle, header alignment
+    - Table Rows: Configure up to 10 row names
+    - Layout: Max width, section padding
+    - Table Styling: Background, header background, border color, border radius, cell padding
+    - Typography: Title, subtitle, header, cell, badge, requirement font sizes
+    - Colors: Section background, title, subtitle, text, labels, badges, icons (check/cross)
+    - Current Tier: Background, badge background/color, label text
+
+  Use Cases:
+    - VIP program page showing tier comparison
+    - Account page tier benefits display
+    - Loyalty landing page
+
+  Technical Notes:
+    - Uses Web Components (joy-vip-tiers-table)
+    - Fetches tiers via window.joyInstance.tiers()
+    - Reads tier benefits from tier.contentPerk array
+    - Detects current tier from window.AVADA_JOY.customer.vipTier
 {% endcomment %}
 
 <div class="joy-vip-tiers-section" data-section-id="{{ section.id }}">

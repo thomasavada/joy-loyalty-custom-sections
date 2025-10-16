@@ -1,7 +1,60 @@
 {% comment %}
-  Joy Points Redemption Section
-  Displays a form for customers to redeem their loyalty points
-  for various rewards and discounts
+  Joy: Points Redemption Section
+
+  A focused section wrapper for the joy-points-redemption-form snippet.
+  Perfect for dedicated redemption pages or cart drawer integration.
+
+  Usage:
+    Add this section through the Theme Editor:
+    1. Go to theme customizer
+    2. Click "Add section"
+    3. Search for "Joy: Points Redemption"
+    4. Configure styling and text
+
+  Key Features:
+    - Section wrapper for joy-points-redemption-form snippet
+    - Centered redemption form with optional header
+    - Customizable colors and styling via section settings
+    - Responsive design with mobile-specific padding
+    - Uses joy-points-redemption-form snippet for functionality
+
+  Form Features (from joy-points-redemption-form snippet):
+    - Program selector dropdown with dynamic updates
+    - Point amount selector for dynamic programs
+    - Real-time discount calculation display
+    - Auto-applies discount code to cart
+    - Redirects to checkout after redemption
+    - Two-step collapsible UI
+    - Form validation and error handling
+    - Loading states during redemption
+
+  Customization (Theme Editor):
+    - Content: Show/hide header, title, subtitle, header alignment
+    - Layout: Max width (400-800px), section padding (desktop and mobile)
+    - Typography: Title size
+    - Colors: Background, title, subtitle, primary, text (primary and secondary), border
+    - Form Styling: Form background, border (show/hide), border width, border radius, shadow
+
+  Use Cases:
+    - Dedicated redemption page: Create a page template with this section
+    - Loyalty dashboard: Add alongside other loyalty sections
+    - Checkout flow: Integration point for pre-checkout redemptions
+    - Account page: Allow customers to redeem from their account
+
+  CSS Custom Properties:
+    The section sets these CSS variables on .joy-redemption-form:
+    - --joy-redemption-primary: Primary color for buttons and accents
+    - --joy-redemption-border: Border color
+    - --joy-redemption-text: Main text color
+    - --joy-redemption-text-secondary: Secondary text color
+    - --joy-redemption-radius: Border radius for form elements
+
+  Difference from joy-custom-way-to-redeem:
+    - joy-custom-way-to-redeem: Grid of program cards with modals (legacy, comprehensive)
+    - joy-points-redemption: Single form for quick redemption (focused, modern)
+    - This section is better for streamlined UX in specific contexts
+    - Use joy-custom-way-to-redeem for browsable program catalogs
+
 {% endcomment %}
 
 <!-- Include the redemption form snippet -->

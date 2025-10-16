@@ -1,6 +1,44 @@
 {% comment %}
-  Joy Loyalty - VIP Tiers Section
-  This section displays VIP tier information in a table format
+  Joy: VIP Tiers Table Section (Advanced)
+
+  Advanced VIP tier comparison table with enhanced customization and mobile support.
+  Supports multiple tier entry methods (points, spending, orders).
+
+  Key Features:
+    - Enhanced table layout: Fully customizable comparison table
+    - Tier entry methods: Supports points, money spent, or order count
+    - Tier icons: Display custom images above tier names
+    - Current tier highlighting: Visual indication with custom badge
+    - Configurable rows: Up to 10 customizable benefit rows
+    - Image cell support: Automatically detects and displays image URLs in cells
+    - Mobile responsive: Choose between horizontal scroll or vertical stack
+    - Sticky first column: Row labels stay visible during horizontal scroll
+    - Custom scrollbar: Styled scrollbar for horizontal scrolling
+    - Flexible borders: Control table, row, and cell borders independently
+
+  Customization (Theme Editor):
+    - Content: Title, subtitle, header alignment, tier icons toggle
+    - Mobile Settings: Choose scroll or stack mode
+    - Table Rows: Configure up to 10 row names
+    - Layout: Max width, section padding, header margin
+    - Table Styling: Background, header background, borders (table/row/cell), radius, shadow
+    - Typography: All font sizes (title, subtitle, header, cell, badge, requirement)
+    - Colors: Section, title, subtitle, cell text, labels, badges, tier descriptions, icons
+    - Scrollbar Colors: Track, thumb, thumb hover
+    - Current Tier: Background, badge background/color, label text
+
+  Use Cases:
+    - Comprehensive VIP program comparison page
+    - Detailed tier benefits breakdown
+    - Account page with full tier information
+
+  Technical Notes:
+    - Uses Web Components (joy-vip-tiers-table)
+    - Fetches tiers via window.joyInstance.tiers()
+    - Detects tier entry method from tierSettings
+    - Formats requirements based on entry method (points/money/orders)
+    - Supports check marks (✓), cross marks (✗), and image URLs in cells
+    - Mobile: Sticky first column in scroll mode, card layout in stack mode
 {% endcomment %}
 
 <div class="joy-vip-tiers-section" data-section-id="{{ section.id }}">

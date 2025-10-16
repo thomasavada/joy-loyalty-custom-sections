@@ -1,3 +1,38 @@
+{% comment %}
+  Joy: Referral Program Section (Style 2 - Card/Overlay Layout)
+
+  A referral program section with background image and overlay card.
+  Content card can be positioned anywhere on the image (9 positions).
+
+  Key Features:
+    - Card layout: Content card overlays background image
+    - Flexible positioning: 9 positions (top/center/bottom × left/center/right)
+    - Auto-prefills email for logged-in customers
+    - Social sharing: Copy link, email, WhatsApp
+    - LocalStorage caching: Saves referral data for 30 days
+    - Optional "Generate New Link" for guests
+    - Responsive: Stacks vertically on mobile (image top, card bottom)
+
+  Customization (Theme Editor):
+    - Layout: Container width, card border radius, content positioning
+    - Image: Background image for full card
+    - Content: Badge, title, description, terms text
+    - Form: Email placeholder, button texts (default, loading, error)
+    - Sharing: Toggle copy/email/WhatsApp buttons, share texts
+    - Colors: Section background, card, button, inputs
+    - Typography: Font sizes for badge, title, description, form
+    - Spacing: Section padding (top/bottom), input border radius
+
+  Use Cases:
+    - Dedicated referral page with hero image
+    - Landing page referral widget
+    - Visual referral campaign
+
+  Difference from Style 1:
+    - Style 1: Horizontal layout with image beside form
+    - Style 2: Overlay card layout with background image
+{% endcomment %}
+
 {%- style -%}
   .section-{{ section.id }}-padding {
     padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;

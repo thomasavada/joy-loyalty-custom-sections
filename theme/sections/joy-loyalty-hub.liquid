@@ -1,7 +1,61 @@
 {% comment %}
-  Joy Loyalty Hub Section
-  Modern, flexible section combining earning and redeeming programs
-  Uses modular components for maximum design flexibility
+  Joy: Loyalty Hub Section
+
+  A modern, comprehensive loyalty page combining earning and redeeming programs in one flexible section.
+  Recommended for new implementations over legacy separate sections.
+
+  Usage:
+    Add this section through the Theme Editor:
+    1. Go to theme customizer
+    2. Click "Add section"
+    3. Search for "Joy: Loyalty Hub"
+    4. Configure layout and programs
+
+  Key Features:
+    - All-in-one loyalty page: Both earning and redemption programs in one section
+    - Modular design: Uses joy-earning-programs and joy-redeeming-programs components
+    - Customer info display: Shows points, tier level, and progress to next tier
+    - Flexible layouts: Side-by-side, stacked, or earning-first arrangements
+    - Customizable sections: Show/hide earning or redeeming independently
+    - Program filtering: Limit number of programs, filter by type
+    - Optional footer: Terms & conditions links, custom footer text
+    - Guest support: Shows "Sign in" link for non-logged-in users
+
+  Layout Options:
+    - Side by Side: Earning and redeeming programs in two columns (desktop)
+    - Stacked: Programs stacked vertically (one column)
+    - Earning First: Custom order with earning programs prioritized
+    - Mobile: Always stacks to single column
+
+  Components Used:
+    - joy-earning-programs: Displays ways to earn points (snippet)
+    - joy-redeeming-programs: Displays redemption options (snippet)
+    - joy-customer-points: Shows customer points and tier info (inline component)
+
+  Customization (Theme Editor):
+    - Layout: Style (split/stacked), max width, section padding, spacing
+    - Header: Title, subtitle, alignment, customer info display
+    - Earning Programs: Title, description, layout (grid/list/cards), max programs, filter types
+    - Redeeming Programs: Title, description, layout, max programs, show disabled
+    - Modal Settings: Size, button text, processing/success messages
+    - Typography: Title sizes for main and section headings
+    - Colors: Background, text, primary, secondary, borders, section backgrounds
+    - Section Styling: Border radius, border width, inner padding
+    - Footer: Footer text, terms & conditions link
+
+  Customer Info Features:
+    - Points balance display with custom terminology
+    - VIP tier name and badge
+    - Progress bar to next tier level
+    - Guest state with login link
+
+  Advantages Over Legacy Sections:
+    - Single section instead of separate earning/redeeming sections
+    - Better performance with shared components
+    - Consistent styling across both programs
+    - Easier maintenance and updates
+    - More flexible layout options
+
 {% endcomment %}
 
 {{ 'joy-loyalty-hub.css' | asset_url | stylesheet_tag }}

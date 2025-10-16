@@ -1,6 +1,86 @@
 {% comment %}
-  Joy Loyalty - Custom Way to Earn Section
-  This section displays earning programs with robust error handling
+  Joy: Custom Way to Earn Section (Legacy)
+
+  A comprehensive earning programs display with interactive modals for different program types.
+  Displays all available ways customers can earn loyalty points with clickable cards and modals.
+
+  Note: This is a legacy section. For new implementations, prefer using:
+  - joy-earning-programs.liquid snippet for embedded widgets
+  - Joy App blocks in the theme editor
+
+  Usage:
+    Add this section through the Theme Editor:
+    1. Go to theme customizer
+    2. Click "Add section"
+    3. Search for "Joy: Custom Way to Earn"
+    4. Configure layout and styling settings
+
+  Key Features:
+    - Grid layout of earning program cards with icons and descriptions
+    - Optional banner image beside the program grid
+    - Interactive modals for different program types:
+      * Birthday: Date input form
+      * Newsletter: Email subscription form
+      * Review: Product review prompts
+      * Referral: Shareable referral links
+      * Custom: Flexible custom program forms
+      * Social media actions (Facebook like, Instagram follow, etc.)
+    - Login/signup prompts for guest users
+    - Completed program tracking with visual indicators
+    - Responsive grid: Customizable columns for desktop/mobile
+    - Extensive styling options for cards, modals, typography
+    - Hover effects and transitions
+    - Error handling and loading states
+
+  Layout Options:
+    - With banner: 2-column grid beside banner image
+    - Without banner: 3-column full-width grid
+    - Mobile: Stacks to single column, hides banner
+    - Customizable card gaps and padding
+
+  Program Types Supported:
+    - signup: Account creation reward
+    - birthday: Birthday rewards with date collection
+    - newsletter: Email subscription
+    - review: Product review requests
+    - referral: Referral link sharing
+    - facebook_like: Facebook page like
+    - instagram_follow: Instagram follow
+    - tiktok_follow: TikTok follow
+    - twitter_follow: Twitter follow
+    - youtube_subscribe: YouTube subscribe
+    - custom: Custom earning actions
+
+  Customization (Theme Editor):
+    - Layout: Grid columns, card gaps, max width
+    - Banner: Image, size, position, gradient fallback
+    - Typography: Title, subtitle, card text sizes and colors
+    - Card Styling: Background, border, padding, hover states, border radius
+    - Icons: Size, color, background, shapes (circle/square/rounded)
+    - Completed Programs: Opacity, visibility
+    - Modal Settings: Size, text customization for all program types
+    - Colors: Comprehensive color controls for all elements
+    - Responsive: Separate settings for mobile and desktop
+
+  Modal Interactions:
+    - Birthday: Validates date input, saves to customer metafields
+    - Newsletter: Integrates with email marketing
+    - Review: Links to product review pages
+    - Referral: Copy-to-clipboard functionality for referral links
+    - Social: Opens social media pages in new tabs
+    - All modals have customizable text, buttons, and success messages
+
+  Guest User Experience:
+    - Shows login/signup modal when guests click program cards
+    - Customizable call-to-action text
+    - Links to account pages
+
+  Performance Features:
+    - Lazy loading of modals
+    - Optimized animations with will-change
+    - Efficient event handling
+    - Error boundaries and fallbacks
+
 {% endcomment %}
 
 <div class="joy-custom-earn-section" data-section-id="{{ section.id }}">

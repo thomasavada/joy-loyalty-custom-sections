@@ -1,6 +1,87 @@
 {% comment %}
-  Joy Loyalty - Custom Way to Redeem Section
-  This section displays redeem programs in a simple list layout
+  Joy: Custom Way to Redeem Section (Legacy)
+
+  A comprehensive redeeming programs display with interactive modals and dynamic point selection.
+  Displays all available redemption options with clickable cards and redemption modals.
+
+  Note: This is a legacy section. For new implementations, prefer using:
+  - joy-redeeming-programs.liquid snippet for embedded widgets
+  - joy-loyalty-hub.liquid section for complete loyalty pages
+  - Joy App blocks in the theme editor
+
+  Usage:
+    Add this section through the Theme Editor:
+    1. Go to theme customizer
+    2. Click "Add section"
+    3. Search for "Joy: Custom Way to Redeem"
+    4. Configure layout and styling settings
+
+  Key Features:
+    - Flex-wrap grid layout of redemption program cards
+    - Interactive redemption modals with dynamic or fixed point selection
+    - Discount code display with copy-to-clipboard functionality
+    - Automatic cart discount application
+    - Point slider for dynamic redemption programs
+    - Real-time discount calculation display
+    - Login prompts for guest users
+    - Disabled state for programs customer can't afford
+    - Extensive customization options for cards, modals, typography
+    - Hover effects and transitions
+    - Success states with visual feedback
+
+  Program Types:
+    - Fixed Redemption: Spend exact points for a reward (e.g., 500 points for $5 off)
+    - Dynamic Redemption: Variable points with slider (e.g., 100 points = $1 off, scalable)
+    - Discount types: Percentage or amount discounts
+    - Free shipping rewards
+    - Gift card redemptions
+    - Product discounts
+
+  Modal Features:
+    - Dynamic Programs: Point slider with real-time discount calculation
+    - Fixed Programs: Simple confirmation with point cost
+    - Discount code display: Copy button and auto-apply functionality
+    - Success animations with checkmarks
+    - Error handling with user-friendly messages
+    - Processing states with spinner animations
+    - Escape key to close, overlay click to close
+
+  Redemption Flow:
+    1. Customer clicks program card
+    2. Modal opens with program details
+    3. For dynamic: Slider to select points amount
+    4. Customer confirms redemption
+    5. Joy SDK processes redemption
+    6. Discount code displayed with copy/apply buttons
+    7. Customer can apply code and redirect to cart
+
+  Customization (Theme Editor):
+    - Layout: Max width, section padding, card gaps
+    - Typography: Title, program names, descriptions, points text sizes
+    - Card Styling: Background, border, padding, hover states, border radius
+    - Icons: Size, background color, border radius, show/hide
+    - Button Styling: Text size, border radius, colors
+    - Colors: Primary, background, title, text, borders
+    - Text Settings: All button and message text customizable
+    - Modal Settings: Slider labels, success messages, discount code instructions
+    - Responsive: Separate settings for mobile
+
+  Guest User Experience:
+    - Shows redeem buttons but redirects to /account/login when clicked
+    - Can browse available rewards before signing in
+
+  Discount Code Features:
+    - Displays generated coupon code after redemption
+    - Copy-to-clipboard with visual feedback
+    - "Apply code" button that redirects to cart with discount applied
+    - Fallback to standard /discount/{code} URL redirect
+
+  Performance Features:
+    - Lazy modal rendering (only when needed)
+    - Optimized animations with CSS transforms
+    - Efficient event delegation
+    - Error boundaries and fallbacks
+
 {% endcomment %}
 
 <div class="joy-custom-redeem-section" data-section-id="{{ section.id }}">

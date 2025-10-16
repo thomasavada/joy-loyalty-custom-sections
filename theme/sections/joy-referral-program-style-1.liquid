@@ -1,3 +1,39 @@
+{% comment %}
+  Joy: Referral Program Section (Style 1 - Horizontal Layout)
+
+  A referral program section with side-by-side layout for image and form.
+  Customers enter their email to generate a shareable referral link.
+
+  Key Features:
+    - Email form with auto-generation of referral links via Joy SDK
+    - Horizontal layout: Image positioned beside form (left or right)
+    - Auto-prefills email for logged-in customers
+    - Social sharing: Copy link, email, Facebook, WhatsApp
+    - LocalStorage caching: Saves referral data for 30 days
+    - Success stats: Shows count of friends who joined
+    - Optional "Generate New Link" for guests
+    - Responsive: Stacks vertically on mobile
+
+  Customization (Theme Editor):
+    - Layout: Container width, full-width mode, border radius, inner padding
+    - Image: Upload and position (left/right)
+    - Content: Badge, title, description, terms text
+    - Form: Email placeholder, button texts (default, loading, error)
+    - Sharing: Toggle copy/email/Facebook/WhatsApp buttons, share texts
+    - Colors: Section background, card, button, text, inputs
+    - Typography: Font sizes for badge, title, description, form
+    - Spacing: Section padding (top/bottom)
+
+  Use Cases:
+    - Dedicated referral page
+    - Account page referral widget
+    - Loyalty program landing page
+
+  Difference from Style 2:
+    - Style 1: Horizontal layout with image beside form
+    - Style 2: Overlay card layout with background image
+{% endcomment %}
+
 {%- style -%}
   .section-{{ section.id }}-padding {
   padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;

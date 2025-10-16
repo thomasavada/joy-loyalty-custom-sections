@@ -1,7 +1,40 @@
 {% comment %}
   Joy Earning Programs Component
-  High-standard, modular component for displaying earning programs
-  Extends JoyBaseComponent for consistency and reusability
+  Displays customer loyalty earning opportunities with flexible layouts
+
+  Usage:
+    {% render 'joy-earning-programs' %}
+    <joy-earning-programs
+      data-customer-id="{{ customer.id | default: '' }}"
+      data-layout="grid"
+      data-show-completed="true"
+      data-max-programs="6"
+      data-filter-types="signup,birthday,review"
+    ></joy-earning-programs>
+
+  Attributes:
+  - data-customer-id: Customer ID (required for personalization)
+  - data-layout: Layout type - "grid", "list", or "cards" (default: "grid")
+  - data-show-completed: Show completed programs (default: "true")
+  - data-max-programs: Limit number of programs to display (default: all)
+  - data-filter-types: Comma-separated program types to show (optional)
+
+  Features:
+  - Multiple layout options (grid, list, cards)
+  - Shows program icons with emoji fallbacks
+  - Displays points earned for each program
+  - Completion status indicators
+  - Click handling for program actions
+  - Responsive design
+
+  Customization:
+  <style>
+    joy-earning-programs {
+      --joy-primary-color: #YOUR_COLOR;
+      --joy-border-color: #YOUR_COLOR;
+      --joy-text-primary: #YOUR_COLOR;
+    }
+  </style>
 {% endcomment %}
 
 {% render 'joy-base-component' %}
