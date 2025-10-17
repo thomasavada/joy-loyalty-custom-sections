@@ -1,0 +1,1119 @@
+{%- capture contentForQuerystring -%}{{ content_for_header }}{%- endcapture -%}
+
+{%- assign pageUrl = contentForQuerystring
+        | split: '"pageurl":"'
+        | last
+        | split: '"'
+        | first
+        | split: request.host
+        | last
+        | replace: '\/', '/'
+        | replace: '%20', ' '
+        | replace: '\u0026', '&'
+        | split: '&'
+        | first
+-%}
+
+{%- assign startsWith = '/account?analytics_trace_id' -%}
+{%- assign checkArray = pageUrl | split: startsWith -%}
+{% if checkArray[0] == blank %}
+    {%- assign pageUrl = '/account' -%}
+{% endif %}
+
+{%- assign currencySymbol = 'S' -%}
+{%- assign gstNotes = "<span class='gst-notes'>GST incl.</span>" -%}
+{%- assign customerMemberTier = customer.metafields.custom.membership_tier | replace: ' ', '-' | downcase -%}
+{%- assign membershipTiers = 'TTR Basic,TTR Curator,TTR Insider,TTR Ambassador' | split: ',' -%}
+{%- assign membershipTiersTarget = '0,100,250,500' | split: ',' -%}
+{%- assign double_quote = '"' -%}
+{%- assign escaped_double_quote = '\"' -%}
+
+{% comment %}
+  3 scenarios:
+  1. Member have not meet the current criteria for 6 months to maintain current tier
+  2. Member met criteria for 6 months and can pursue next tier
+  3. Member is already the top tier, to continue spending to maintain tier
+{% endcomment %}
+
+{% comment %}
+  Customer accounte enabled: {{ shop.customer_accounts_enabled }}
+{% endcomment %}
+
+{% comment %}
+  Set the current page value based on the query parameters from the url
+{% endcomment %}
+{%- assign allPageUrl = contentForQuerystring
+        | split: '"pageurl":"'
+        | last
+        | split: '"'
+        | first
+        | split: request.host
+        | last
+        | replace: '\/', '/'
+        | replace: '%20', ' '
+        | replace: '\u0026', '&'
+-%}
+{%- liquid
+    assign params = allPageUrl | split: '?'
+    assign query_string = params[1] | default: ''
+    assign queryArr = query_string | split: '&'
+    assign queryArrWithoutPage = ''
+
+    for query in queryArr
+        unless query contains 'history=' or query contains 'section_id='
+            assign queryArrWithoutPage = queryArrWithoutPage | append: '?' | append: query
+        endunless
+    endfor
+
+    if params.size <= 1
+        assign sp_current_page = 1
+    else
+        assign query = params[1]
+        assign page_param = query | split: '&' | where: 'history'
+        if page_param.size > 0
+            assign page_value = page_param[0] | split: '=' | last
+            assign sp_current_page = page_value | replace: '[', '' | replace: ']', '' | plus: 0
+        else
+            assign sp_current_page = 1
+        endif
+    endif
+-%}
+
+{%- liquid
+    if shop.customer_accounts_enabled
+        if customer
+            comment
+              assign aj_point = customer.metafields.avada_joy.point | split: ''
+            endcomment
+            assign aj_point = customer.metafields['app--3373963--joy_loyal'].numberPoint | split: ''
+            assign newaj_point = ''
+            for digit in aj_point
+                assign threeFromEnd = aj_point.size | minus: forloop.index | modulo: 3
+                assign revisedD = ''
+                if threeFromEnd == 2 and forloop.index != 1
+                    assign revisedD = digit | prepend: '~'
+                else
+                    assign revisedD = digit
+                endif
+                assign newaj_point = newaj_point | append: revisedD
+            endfor
+            assign pointsDisplay = newaj_point | join: '' | replace: '~', ','
+            comment
+              assign joyTierObj = customer.metafields.avada_joy.vipTier | json_parse
+              assign joyTier = joyTierObj.tierName
+            endcomment
+            assign joyTier = customer.metafields['app--3373963--joy_loyal'].tierName | json_parse
+
+            assign customerMemberTier = joyTier | replace: ' ', '-' | downcase
+            assign nextTierIndex = 0
+            assign currentTierIndex = 0
+            for membershipTier in membershipTiers
+                if membershipTier == joyTier
+                    assign currentTierIndex = forloop.index
+                endif
+            endfor
+            if currentTierIndex > 0
+                assign currentTierIndex = currentTierIndex | minus: 1
+            endif
+
+            assign checkSize = membershipTiers.size | minus: 1
+            if currentTierIndex < checkSize
+                assign currentTierTarget = membershipTiersTarget[currentTierIndex]
+                assign nextTierIndex = currentTierIndex | plus: 1
+                assign nextTier = membershipTiers[nextTierIndex]
+                assign nextTierTarget = membershipTiersTarget[nextTierIndex]
+            else
+                assign currentTierTarget = membershipTiersTarget[currentTierIndex]
+                assign nextTierTarget = membershipTiersTarget[currentTierIndex]
+            endif
+            assign totalSpending = 0
+            assign days = 30 | times: 6 | times: 86400
+            assign dateCompare = 'now' | date: '%s' | minus: days | date: '%Y-%m-01' | date: '%s'
+            for order in customer.orders
+                assign createDate = order.created_at | date: '%s'
+                if createDate > dateCompare
+                    assign totalSpending = totalSpending | plus: order.total_price
+                endif
+            endfor
+            assign totalSpending = 499 | times: 100.00
+
+            assign totalSpending = totalSpending | money_without_currency
+            assign shortfall = currentTierTarget | minus: totalSpending
+            assign amountCheck = nextTierTarget | minus: totalSpending
+            assign nextTierTarget = nextTierTarget | minus: totalSpending | times: 100.00 | money
+
+            assign nextTierText = 'become'
+            if shortfall > 0
+                assign nextTierText = 'maintain'
+                assign nextTier = joyTier
+                assign nextTierTarget = shortfall | times: 100.00 | money
+            endif
+            if shortfall < 0 and amountCheck < 0
+                assign nextTierText = 'maintain'
+                assign nextTier = joyTier
+                assign nextTierTarget = currentTierTarget | times: 100.00 | money
+            endif
+        endif
+    endif
+-%}
+
+<!-- Render all required customer information -->
+<script>
+  let customAcct = {};
+  let customHTML = "";
+
+  {% if customer %}
+  {%- case pageUrl -%}
+  {%- when '/account' -%}
+  customHTML += "<div class='custom-account-wrapper'>";
+  customAcct.id = "{{ customer.id }}";
+  customAcct.firstName = "{{ customer.first_name }}";
+  customAcct.lastName = "{{ customer.last_name }}";
+  customAcct.email = "{{ customer.email }}";
+  customAcct.phone = "{{ customer.phone }}";
+  customAcct.compAdd = "";
+  {% for address in customer.addresses %}
+  {% if address == customer.default_address %}
+  customAcct.compAdd += "{{ address.address1 }}";
+  {% if address.address2 %}
+  customAcct.compAdd += " " + "{{ address.address2 }}";
+  {% endif %}
+  {% if address.country %}
+  customAcct.compAdd += " " + "{{ address.country }}";
+  {% endif %}
+  {% if address.zip %}
+  customAcct.compAdd += " " + "{{ address.zip }}";
+  {% endif %}
+  {% endif %}
+  {% endfor %}
+  customAcct.membershipTier = "{{ joyTier }}";
+  customAcct.membershipClass = "{{ customerMemberTier }}";
+  customAcct.birthday = "{{ customer.metafields.custom.birthday }}";
+  // TODO: Add logic
+  customAcct.storeCredits = "$0.00";
+  //customAcct.giftCardBalance = "$28.10";
+  customAcct.membershipPoints = "{{ pointsDisplay }}";
+
+  var displayCount = 0;
+  var extraInfoClass = "";
+  if (customAcct.storeCredits) {
+    displayCount = displayCount + 1;
+  }
+  if (customAcct.giftCardBalance) {
+    displayCount = displayCount + 1;
+  }
+  if (customAcct.membershipPoints) {
+    displayCount = displayCount + 1;
+  }
+  if (displayCount == 1) {
+    extraInfoClass = "padone";
+  } else if (displayCount == 2) {
+    extraInfoClass = "padtwo";
+  } else if (displayCount == 3) {
+    extraInfoClass = "padthree";
+  }
+
+  if (customAcct.firstName || customAcct.lastName) {
+    customHTML += "<div class='intro-wrapper'>";
+    if (customAcct.firstName) {
+      customHTML += "Hello,<br/>" + customAcct.firstName;
+    }
+    if (customAcct.lastName) {
+      customHTML += " " + customAcct.lastName;
+    }
+    customHTML += ".";
+    customHTML += "</div>";
+  }
+
+  if (customAcct.membershipTier) {
+    // start of card display
+    customHTML += "<div class='member-profile-edit'><a href='/account/addresses?a=profile'>Edit</a></div>";
+    customHTML += "<div class='membership-card'>";
+    customHTML += "<div class='flip-card-inner'>";
+
+    customHTML += "<div class='flip-card-front'>";
+    customHTML += "<div class='flip-card-front-col'>";
+    customHTML += "<div class='name-wrapper'>";
+    customHTML += customAcct.firstName + " " + customAcct.lastName;
+    customHTML += "</div>";
+    if (customAcct.membershipTier) {
+      customHTML += "<div class='tier-wrapper " + customAcct.membershipClass + " " + extraInfoClass + "'>";
+      customHTML += customAcct.membershipTier;
+      customHTML += "</div>";
+    }
+    if (customAcct.storeCredits || customAcct.giftCardBalance || customAcct.membershipPoints) {
+      customHTML += "<div class='member-info-wrapper'>";
+      if (customAcct.membershipPoints) {
+        customHTML += "<div class='info-row'>";
+        customHTML += "<div class='label-col'>" + customAcct.membershipPoints + "</div>";
+        customHTML += "<div class='val-col'>TTR Points</div>";
+        customHTML += "</div>";
+      }
+      if (customAcct.storeCredits) {
+        customHTML += "<div class='info-row store-credits'>";
+        customHTML += "<div class='label-col store-credits-value'>" + customAcct.storeCredits + "</div>";
+        customHTML += "<div class='val-col'>Store Credits</div>";
+        customHTML += "</div>";
+      }
+      if (customAcct.giftCardBalance) {
+        customHTML += "<div class='info-row'>";
+        customHTML += "<div class='label-col'>" + customAcct.giftCardBalance + "</div>";
+        customHTML += "<div class='val-col'>Gift Card Balance</div>";
+        customHTML += "</div>";
+      }
+      customHTML += "</div>";
+    }
+    customHTML += "</div>";
+    customHTML += "<div class='flip-card-front-col'>";
+    customHTML += "<img src='/cdn/shop/t/2/assets/tinsel-brand-mark.png'>";
+    customHTML += "<div class='brand-name'>The Tinsel Club</div>";
+    customHTML += "</div>";
+    customHTML += "</div>";
+
+
+    customHTML += "<div class='flip-card-back'>";
+    customHTML += "<div class='flip-card-back-wrapper'>";
+    customHTML += "<div class='back-title'>Personal Information</div>";
+    customHTML += "<div class='info-row'>";
+    customHTML += "<div class='label-col'>Email:</div>";
+    customHTML += "<div class='val-col'>" + customAcct.email + "</div>";
+    customHTML += "</div>";
+    customHTML += "<div class='info-row'>";
+    customHTML += "<div class='label-col'>Phone:</div>";
+    customHTML += "<div class='val-col'>" + customAcct.phone + "</div>";
+    customHTML += "</div>";
+    if (customAcct.compAdd) {
+      customHTML += "<div class='info-row'>";
+      customHTML += "<div class='label-col'>Address:</div>";
+      customHTML += "<div class='val-col'>" + customAcct.compAdd + "</div>";
+      customHTML += "</div>";
+    }
+    customHTML += "</div>";
+    customHTML += "</div>";
+
+    customHTML += "</div>";
+    customHTML += "</div>";
+    // End of card display
+
+    // Swipe icons
+    customHTML += "<div class='swipe-wrapper'>";
+    customHTML += "<div class='swipe-icon'><img src='/cdn/shop/t/2/assets/swipe-icon.svg'></div>";
+    customHTML += "<div class='swipe-icon'><img src='/cdn/shop/t/2/assets/swipe-icon.svg'></div>";
+    customHTML += "</div>";
+
+    // Progress Bar
+    let nextTierTarget = "{{ nextTierTarget }}";
+    let nextTier = "{{ nextTier }}";
+    let nextTierText = "{{ nextTierText }}";
+    //let tierMsg = "Spend " + nextTierTarget + " within 6 months to " + nextTierText + " <span class='next-tier'>" + nextTier + "</span>";
+    let tierMsg = "";
+    customHTML += "<div class='progress-bar-wrapper'>";
+    customHTML += "<div class='tier-msg'>" + tierMsg + "</div>";
+
+    customHTML += "<div class='progress-container'>";
+    customHTML += "<ul>";
+    customHTML += "<li class='ttr-basic'></li>";
+    customHTML += "<li class='ttr-curator'></li>";
+    customHTML += "<li class='ttr-insider'></li>";
+    customHTML += "<li class='ttr-ambassador'></li>";
+    customHTML += "</ul>";
+    customHTML += "<div class='progress-bar'></div>";
+    customHTML += "</div>";
+
+    customHTML += "<div class='progress-desc'>";
+    customHTML += "<div>";
+    customHTML += "<div>TTR Basic</div>";
+    customHTML += "<div>TTR<br/>Curator</div>";
+    customHTML += "<div>TTR<br/>Insider</div>";
+    customHTML += "<div>TTR<br/>Ambassador</div>";
+    customHTML += "</div>";
+    customHTML += "</div>";
+
+    customHTML += "</div>";
+    customHTML += "<div class='gift-card'>Have a gift card? Click <a href='/apps/vify-gift-card/card/check-balance' target='_blank'>here</a> to check your balance.</div>";
+    customHTML += "<div class='storecredits-history' data-customer='" +  customAcct.id + "'></div>";
+
+    // TTR Ambassador Reminder Inline Widget
+    customHTML += "<style>";
+    customHTML += ".joy-vip-inline-container{margin:24px 0 40px 0;width:100%;display:flex;justify-content:center}";
+    customHTML += ".joy-vip-card-inline{background:transparent;color:#000;border:none;border-radius:0;padding:20px 0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;position:relative;width:398px;max-width:100%;text-align:center}";
+    customHTML += ".joy-vip-head-inline{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;text-align:left}";
+    customHTML += ".joy-vip-badge-inline{font-size:var(--font-size-15);font-weight:400;background:var(--color-membership-ambassador);color:#000;border:1px solid var(--color-black);padding:5px 8px 3px 8px;border-radius:10px;white-space:nowrap;display:inline-block}";
+    customHTML += ".joy-vip-secured-inline{background:#10b981;color:#fff}";
+    customHTML += ".joy-vip-short-inline{background:#fef3c7;color:#92400e;border-color:#fcd34d}";
+    customHTML += ".joy-vip-main-text{font-size:14px;line-height:1.6;margin-bottom:16px;color:#444;text-align:left}";
+    customHTML += ".joy-vip-row-inline{display:flex;justify-content:space-between;gap:10px;margin:10px 0px;flex-wrap:wrap;font-size:13px;color:#666;text-align:left}";
+    customHTML += ".joy-vip-row-inline strong{color:#000;font-weight:600}";
+    customHTML += ".joy-vip-meter-inline{height:11px;background:transparent;border:1px solid var(--color-black);border-radius:10px;overflow:visible;margin:14px 0 8px;padding:0;position:relative}";
+    customHTML += ".joy-vip-fill-inline{display:block !important;height:100%;width:0%;background:var(--color-black);border-radius:9px;transition:width 0.3s ease;position:relative}";
+    customHTML += ".joy-vip-fill-inline:after{content:'';position:absolute;top:-5px;right:-10px;width:20px;height:20px;background-image:url('/cdn/shop/t/2/assets/progress-bar-smiley.svg');background-size:cover;background-repeat:no-repeat;display:inline-block;opacity:1;transition:opacity 0.3s ease}";
+    customHTML += ".joy-vip-fill-inline.ttr-curator:after{background-image:url('/cdn/shop/t/2/assets/progress-bar-smiley-curator.svg')}";
+    customHTML += ".joy-vip-fill-inline.ttr-insider:after{background-image:url('/cdn/shop/t/2/assets/progress-bar-smiley-insider.svg')}";
+    customHTML += ".joy-vip-fill-inline.ttr-ambassador:after{background-image:url('/cdn/shop/t/2/assets/progress-bar-smiley-ambassador.svg')}";
+    customHTML += ".joy-vip-cta-inline{margin:36px auto 0;display:inline-block;background:#000;color:#fff;border:none;padding:11px 24px;border-radius:4px;font-weight:600;font-size:12px;text-decoration:none;cursor:pointer;transition:opacity 0.2s;letter-spacing:0.8px;text-transform:uppercase}";
+    customHTML += ".joy-vip-cta-inline:hover{opacity:0.85}";
+    customHTML += ".joy-vip-close-inline{display:none}";
+    customHTML += "@media (max-width:720px){.joy-vip-inline-container{margin:20px 0}.joy-vip-card-inline{width:100%;padding:18px 0}.joy-vip-main-text{font-size:13px}.joy-vip-cta-inline{width:100%;padding:12px}}";
+    customHTML += "</style>";
+    customHTML += "<div class='joy-vip-inline-container' id='joy-vip-mount-inline' hidden></div>";
+
+    customHTML += "<div id='ReturngoAccountEmbedding'></div>";
+  }
+
+  {%- when '/account?a=orders' -%}
+  customHTML += "<div class='custom-order-wrapper'>";
+  customHTML += "<div class='tab-header'>My Orders</div>";
+  customHTML += "<div class='tab-line'>&nbsp;</div>";
+
+  {% if customer.orders.size == 0 %}
+  customHTML += "<div class='empty-msg'>There are no orders yet.</div>";
+  {% endif %}
+
+  {% assign loopCount = 0 %}
+
+  {% paginate customer.orders by 300 %}
+  {% assign sortedOrders = customer.orders | sort: 'created_at' | reverse %}
+  {% endpaginate %}
+
+  {%- liquid
+      assign sortedOrders = sortedOrders | slice: 0, 30
+      assign items_per_page = 5
+      assign allpages = sortedOrders.size
+      assign total_pages = allpages | divided_by: items_per_page
+      assign remainder = allpages | modulo: items_per_page
+      if remainder > 0
+          assign total_pages = total_pages | plus: 1
+      endif
+
+      assign middle_range = 1
+      assign before_last_page = total_pages | minus: 1
+      assign lower_bound = sp_current_page | minus: middle_range
+      assign upper_bound = sp_current_page | plus: middle_range
+      assign ellipsis_start = middle_range | plus: 2
+      assign ellipsis_end = before_last_page | minus: middle_range
+
+      assign offset = items_per_page | times: sp_current_page | minus: items_per_page
+      assign paginated_data = sortedOrders | slice: offset, items_per_page
+  -%}
+
+  {%- for order in paginated_data -%}
+  {% assign loopCount = loopCount | plus: 1 %}
+  {% assign orderStatus = "Pending" %}
+  {% assign allowReturn = false %}
+  {% assign currentOrderStatus = order.fulfillment_status_label | downcase %}
+  {% case currentOrderStatus %}
+  {% when 'unfulfilled' %}
+  {% assign orderStatus = "Preparing to ship" %}
+  {% when 'fulfilled' %}
+  {% assign orderStatus = order.fulfillment_status_label %}
+  {% assign allowReturn = true %}
+  {% endcase -%}
+  {% assign currentPaymentStatus = order.financial_status_label | downcase %}
+  {% case currentPaymentStatus %}
+  {% when 'refunded' %}
+  {% assign orderStatus = "Refunded" %}
+  {% assign allowReturn = false %}
+  {% when 'unpaid' %}
+  {% assign orderStatus = "Unpaid" %}
+  {% assign allowReturn = false %}
+  {% when 'partially refunded' %}
+  {% assign orderStatus = orderStatus | append: ", Partially Refunded" %}
+  {% endcase -%}
+  {%-liquid
+      assign isSpecialReturns = false
+      assign returnStatus = ''
+      assign countReturnProgress = 0
+      for tag in order.tags
+          if tag == "Restocked via ReturnGO"
+              assign countReturnProgress = countReturnProgress | plus: 1
+          endif
+          if tag == "Return requested via ReturnGO"
+              assign countReturnProgress = countReturnProgress | plus: 1
+          endif
+          if tag == "Special Returns"
+              assign isSpecialReturns = true
+          endif
+      endfor
+      if countReturnProgress == 2
+          assign returnStatus = "Return In Progress"
+      endif
+  -%}
+  {% if returnStatus != '' %}
+  {% assign orderStatus = orderStatus | append: ", " | append: returnStatus %}
+  {% endif %}
+  {% comment %}
+  {% if allowReturn and order.total_net_amount <= 0 %}
+    {% assign allowReturn = false %}
+  {% endif %}
+  {% endcomment %}
+  {%- liquid
+      assign days = 30 | times: 86400
+      assign dateCompare = 'now' | date: '%s' | minus: days | date: '%Y-%m-%d' | date: '%s'
+      assign createDate = order.created_at | date: '%s'
+      if createDate < dateCompare
+          assign allowReturn = false
+      endif
+      if isSpecialReturns
+          assign allowReturn = true
+      endif
+
+      assign ninjaVanPrefix = 'https://www.ninjavan.co/en-sg/tracking?id='
+      assign trackingNo = ''
+      for line_item in order.line_items
+          if line_item.fulfillment.tracking_company == "Ninja Van"
+              assign trackingCode = line_item.fulfillment.tracking_number
+              if trackingNo != ''
+                  assign trackingNo = trackingNo | append: ','
+              endif
+              assign trackingNo = trackingNo | append: '<a href=\"' | append: ninjaVanPrefix | append: trackingCode | append: '\" target=\"_blank\">' | append: trackingCode | append: '</a>'
+          endif
+      endfor
+      assign trackingNo = trackingNo | split: ','
+      assign trackingNo = trackingNo | uniq | join: ', '
+  %}
+
+  {% if loopCount == 1 %}
+  customHTML += "<div class='order-detail-wrapper'>";
+  {% endif %}
+  {% if loopCount > 1 %}
+  customHTML += "<div class='order-detail-wrapper'>";
+  {% endif %}
+
+  customHTML += "<div class='order-detail-top'>";
+  customHTML += "<div class='order-detail-col'>";
+  customHTML += "<div class='order-detail-colrow'>";
+  customHTML += "<div class='order-detail-sublabel'>Order Id: </div>";
+  customHTML += "<div class='order-id'>{{ order.name }}</div>";
+  customHTML += "</div>";
+  customHTML += "</div>";
+
+  customHTML += "<div class='order-detail-col'>";
+  customHTML += "<div class='order-detail-colrow'>";
+  customHTML += "<div class='order-detail-sublabel'>Date:</div>";
+  customHTML += "<div class='order-date'>{{ order.created_at | date: '%d/%m/%Y' }}</div>";
+  customHTML += "</div>";
+  customHTML += "<div class='order-detail-colrow'>";
+  customHTML += "<div class='order-detail-sublabel'>Status:</div>";
+  customHTML += "<div class='order-status'>{{ orderStatus }}</div>";
+  customHTML += "</div>";
+  {%- if trackingNo != '' -%}
+  customHTML += "<div class='order-detail-colrow'>";
+  customHTML += "<div class='order-detail-sublabel'>Tracking:</div>";
+  customHTML += "<div class='tracking-code'>{{ trackingNo }}</div>";
+  customHTML += "</div>";
+  {%- endif -%}
+  customHTML += "</div>";
+
+  customHTML += "<div class='order-detail-col'>";
+  customHTML += "<a href='https://app.oxilayer.com/api/invoice/19ac13d57eba2057fd5ed5104c0c2355/{{ order.email | append: order.name | md5 }}/{{ order.id }}/ttr_invoice_{{ order.name | handle }}.pdf?start=1' target='_blank'>";
+  customHTML += "<button class='order-invoice button-black animate-rotate' data-title='Print Invoice'><span class='label'>Print Invoice</span></button>";
+  customHTML += "</a>";
+  {%- if allowReturn == true -%}
+  {%- comment -%}
+  customHTML += "<a href='https://returns.richcommerce.co/return/new?c=thetinselrack&orderNumber={{ order.name | url_encode }}&orderEmail={{ order.email | url_encode }}' target='_blank'>";
+  {%- endcomment -%}
+  customHTML += "<a href='/a/service?orderId={{ order.name | url_encode}}&email={{ order.email | url_encode }}' target='_blank'>";
+  customHTML += "<button class='order-return button-white animate-rotate' data-title='Return Request'><span class='label'>Return Request</span></button>";
+  customHTML += "</a>";
+  {%- endif -%}
+  customHTML += "</div>";
+  customHTML += "</div>";
+
+  {%- for lineitem in order.line_items -%}
+  {%-liquid
+      assign itemTrackingNo = lineitem.fulfillment.tracking_number
+  -%}
+  customHTML += "<div class='order-detail-item'>";
+  customHTML += "<div class='item-image'><img src='{{ lineitem.image | img_url: 'medium' }}'></div>";
+  customHTML += "<div class='item-info'>";
+
+  customHTML += "<div class='item-info-row'>";
+  customHTML += "<div class='item-info-row-col'>";
+  customHTML += "<div class='item-title'>";
+  {%- if lineitem.product.url != blank -%}
+  customHTML += "<a href='{{ lineitem.product.url }}'>{{ lineitem.product.title }}</a>";
+  {%- else -%}
+  {%- if lineitem.product.title != blank -%}
+  customHTML += "{{ lineitem.product.title }}";
+  {%- else -%}
+  customHTML += "{{ lineitem.title }}";
+  {%- endif -%}
+  {%- endif -%}
+  {%- if itemTrackingNo != blank -%}
+  customHTML += "<div class='tracking-note'>( Shipped )</div>";
+  {%- endif -%}
+  {%- if lineitem.refunded_quantity > 0 -%}
+  customHTML += "<div class='refund-note'>( Refunded Qty: {{ lineitem.refunded_quantity }} )</div>";
+  {%- endif -%}
+  customHTML += "</div>";
+  customHTML += "</div>";
+  customHTML += "<div class='item-info-row-col'>";
+  customHTML += "<div class='item-price'>{{ currencySymbol }}{{ lineitem.final_line_price | money }} {{ gstNotes }}</div>";
+  customHTML += "</div>";
+  customHTML += "</div>";
+
+  customHTML += "<div class='item-info-row'>";
+  customHTML += "<div class='item-info-row-col sub-info'>";
+  {%- if lineitem.variant.options[1] != blank -%}
+  customHTML += "<div class='item-size'>";
+  customHTML += "<div class='item-sublabel'>Size</div>";
+  customHTML += "<div class='item-subval'>{{ lineitem.variant.options[1] | replace: double_quote, escaped_double_quote }}</div>";
+  customHTML += "</div>";
+  {%- endif -%}
+  {%- if lineitem.variant.options[0] != blank -%}
+  customHTML += "<div class='item-colour'>";
+  customHTML += "<div class='item-sublabel'>Colour</div>";
+  customHTML += "<div class='item-subval'>{{ lineitem.variant.options[0] | replace: double_quote, escaped_double_quote }}</div>";
+  customHTML += "</div>";
+  {%- endif -%}
+  customHTML += "<div class='item-qty'>";
+  customHTML += "<div class='item-sublabel'>Quantity</div>";
+  customHTML += "<div class='item-subval'>{{ lineitem.quantity }}</div>";
+  customHTML += "</div>";
+  customHTML += "</div>";
+  customHTML += "<div class='item-info-row-col'>";
+  {% comment %}
+  customHTML += "<div class='item-review'><button class='button-white wrap'>Review</button></div>";
+  {% endcomment %}
+  customHTML += "</div>";
+  customHTML += "</div>";
+
+  customHTML += "</div>";
+  customHTML += "</div>";
+  {%- endfor -%}
+
+  customHTML += "<div class='order-detail-bottom'>";
+  customHTML += "<div class='bottom-info'>&nbsp;</div>";
+  customHTML += "<div class='bottom-info'>";
+  customHTML += "<div class='order-subtotal'>";
+  customHTML += "<div class='item-sublabel'>Subtotal:</div>";
+  customHTML += "<div class='item-subval'>{{ currencySymbol }}{{ order.subtotal_price | minus: order.total_refunded_amount | money }} {{ gstNotes }}</div>";
+  customHTML += "</div>";
+  customHTML += "<div class='order-shipping'>";
+  customHTML += "<div class='item-sublabel'>Shipping:</div>";
+  customHTML += "<div class='item-subval'>{{ currencySymbol }}{{ order.shipping_price | money }} {{ gstNotes }}</div>";
+  customHTML += "</div>";
+  customHTML += "<div class='order-total'>";
+  customHTML += "<div class='item-sublabel'>Total:</div>";
+  customHTML += "<div class='item-subval'>{{ currencySymbol }}{{ order.total_net_amount | money }} {{ gstNotes }}</div>";
+  customHTML += "</div>";
+  customHTML += "</div>";
+  {%- if order.financial_status_label != "Paid" -%}
+  customHTML += "<div class='payment-info'>( {{ order.financial_status_label }} )</div>";
+  {%- endif -%}
+  customHTML += "</div>";
+
+  customHTML += "</div>";
+  {%- endfor -%}
+
+  {%- comment -%}
+  For custom pagination
+  {%- endcomment -%}
+  customHTML += "<div class='custom-pagination'>";
+
+  {%- if sp_current_page > 1 -%}
+  customHTML += "<a href='{% if queryArrWithoutPage %}{{ queryArrWithoutPage }}{% endif %}&history={{ sp_current_page | minus: 1 }}' class='pagination__link pagination__link--previous'>";
+  customHTML += "<span>";
+  customHTML += "<svg width='8' height='15' viewBox='0 0 8 15' fill='none' xmlns='http://www.w3.org/2000/svg'>";
+  customHTML += "<path d='M1.36723 7.5L7.83391 0.958523C7.88715 0.905806 7.92924 0.84322 7.95775 0.774386C7.98625 0.705552 8.00061 0.631837 7.99998 0.557506C7.99935 0.483175 7.98376 0.409704 7.95409 0.341346C7.92443 0.272987 7.88129 0.211098 7.82716 0.15926C7.77304 0.107422 7.70901 0.0666637 7.63878 0.0393444C7.56854 0.012025 7.4935 -0.0013131 7.418 0.000101867C7.3425 0.00151683 7.26803 0.0176568 7.1989 0.0475878C7.12978 0.0775187 7.06737 0.120646 7.01529 0.174475L0.161773 7.10798C0.05804 7.21293 0 7.35357 0 7.5C0 7.64643 0.05804 7.78707 0.161773 7.89202L7.01529 14.8255C7.06737 14.8794 7.12978 14.9225 7.1989 14.9524C7.26803 14.9823 7.3425 14.9985 7.418 14.9999C7.4935 15.0013 7.56854 14.988 7.63878 14.9607C7.70901 14.9333 7.77304 14.8926 7.82716 14.8407C7.88129 14.7889 7.92443 14.727 7.95409 14.6587C7.98376 14.5903 7.99935 14.5168 7.99998 14.4425C8.00061 14.3682 7.98625 14.2944 7.95775 14.2256C7.92924 14.1568 7.88715 14.0942 7.83391 14.0415L1.36723 7.5Z' fill='black'/>";
+  customHTML += "</svg>";
+  customHTML += "</span>";
+  customHTML += "</a>";
+  {%- endif -%}
+
+  {%- for page in (1..total_pages) -%}
+  {%- if page == 1 or page == total_pages -%}
+  customHTML += "<a href='{% if queryArrWithoutPage %}{{ queryArrWithoutPage }}{% endif %}&history={{ page }}' class='pagination__link {% if sp_current_page == page %}is-active{% endif %}'>";
+  customHTML += "{{ page }}";
+  customHTML += "</a>";
+  {%- elsif page >= lower_bound and page <= upper_bound -%}
+  customHTML += "<a href='{% if queryArrWithoutPage %}{{ queryArrWithoutPage }}{% endif %}&history={{ page }}' class='pagination__link {% if sp_current_page == page %}is-active{% endif %}'>";
+  customHTML += "{{ page }}";
+  customHTML += "</a>";
+  {%- elsif page == 2 and sp_current_page > ellipsis_start -%}
+  customHTML += "<span class='pagination__ellipsis'>...</span>";
+  {%- elsif page == before_last_page and sp_current_page < ellipsis_end -%}
+  customHTML += "<span class='pagination__ellipsis'>...</span>";
+  {%- endif -%}
+  {%- endfor -%}
+
+  {%- if sp_current_page < total_pages -%}
+  customHTML += "<a href='{% if queryArrWithoutPage %}{{ queryArrWithoutPage }}{% endif %}&history={{ sp_current_page | plus: 1 }}' class='pagination__link pagination__link--next'>";
+  customHTML += "<span>";
+  customHTML += "<svg width='8' height='15' viewBox='0 0 8 15' fill='none' xmlns='http://www.w3.org/2000/svg'>";
+  customHTML += "<path d='M6.63277 7.5L0.166093 14.0415C0.112852 14.0942 0.0707603 14.1568 0.042254 14.2256C0.0137478 14.2944 -0.000607435 14.3682 1.95991e-05 14.4425C0.00064711 14.5168 0.0162444 14.5903 0.0459085 14.6587C0.0755725 14.727 0.118714 14.7889 0.172838 14.8407C0.226962 14.8926 0.290992 14.9333 0.361224 14.9607C0.431456 14.988 0.506495 15.0013 0.581999 14.9999C0.657502 14.9985 0.731971 14.9823 0.801095 14.9524C0.87022 14.9225 0.932627 14.8794 0.984707 14.8255L7.83823 7.89202C7.94196 7.78707 8 7.64643 8 7.5C8 7.35357 7.94196 7.21293 7.83823 7.10798L0.984708 0.174472C0.932628 0.120644 0.870221 0.0775169 0.801097 0.0475858C0.731972 0.0176557 0.657503 0.0015157 0.582 0.000100441C0.506497 -0.00131482 0.431457 0.0120233 0.361225 0.0393422C0.290993 0.0666621 0.226963 0.107419 0.17284 0.159257C0.118716 0.211096 0.0755738 0.272986 0.0459097 0.341344C0.0162457 0.409703 0.000648337 0.483173 2.08129e-05 0.557504C-0.000606234 0.631835 0.0137489 0.70555 0.0422552 0.774385C0.0707615 0.843219 0.112853 0.905805 0.166094 0.958521L6.63277 7.5Z' fill='black'/>";
+  customHTML += "</svg>";
+  customHTML += "</span>";
+  customHTML += "</a>";
+  {%- endif -%}
+  customHTML += "</div>";
+  {%- comment -%}
+  End of custom pagination
+  {%- endcomment -%}
+
+  customHTML += "</div>";
+
+
+  {% when '/account?a=wishlist' %}
+  {% include 'custom_control_products' %}
+  {%-liquid
+      assign globalBlockList = globalBlockPrdts | join: ","
+  -%}
+  var globalBlockStr = "{{ globalBlockList }}";
+  var globalBlockList = globalBlockStr.split(",");
+
+  toggleMenu("wishlist");
+  customHTML += "<div class='custom-wishlist-wrapper'>";
+  customHTML += "<div class='tab-header'>My Wishlist</div>";
+  customHTML += "<div class='tab-line'>&nbsp;</div>";
+  customHTML += "<div id='swym-wishlist-render-container'></div>";
+  //customHTML += "." + globalBlockList + ".";
+  customHTML += "</div>";
+
+  window.SwymCallbacks = window.SwymCallbacks || [];
+  window.SwymCallbacks.push(function(swat) {
+    var wishlistContainerElement = document.querySelector("#swym-wishlist-render-container");
+    var queryParams = swat.utils.getEncodedAsObject(window.location.search);// Contains queryParams["lid"];
+    swat.ui.renderWishlistInContainer(wishlistContainerElement, queryParams);});
+
+  let retries = 0;
+  let isWishlistLoaded = setInterval(function() {
+    retries = retries + 1;
+    if (retries == 15) {
+      clearInterval(isWishlistLoaded);
+    }
+    var wishlistContent = document.querySelector(".swym-wishlist-detail-content");
+    if (wishlistContent && wishlistContent.innerHTML != "") {
+      let cartBtns = document.querySelectorAll(".swym-add-to-cart-btn");
+      let completeLoading = true;
+      cartBtns.forEach(cartBtn => {
+        var parentofSelected = cartBtn.parentElement;
+        var priceInfo = parentofSelected.querySelector(".swym-product-price");
+        if (priceInfo && priceInfo.classList.contains("swym-price-loading")) {
+          completeLoading = false;
+        }
+      });
+
+      if (retries == 15) {
+        completeLoading = true;
+      }
+
+      if (completeLoading) {
+        setTimeout(function() {
+          let cartBtns = document.querySelectorAll(".swym-add-to-cart-btn");
+          cartBtns.forEach(cartBtn => {
+            var parentofSelected = cartBtn.parentElement;
+
+            /* var prdtHandleObj = parentofSelected.querySelector("span");
+            var prdtHandle = prdtHandleObj.getAttribute("id");
+            if (prdtHandle && prdtHandle != "") {
+                var prdtTitle = parentofSelected.querySelector(".swym-title");
+                if (prdtTitle && !prdtTitle.classList.contains("updated")) {
+                  prdtTitle.classList.add("updated");
+
+                  var prdtLink = "/search?q=" + prdtHandle.toLowerCase();
+                  prdtTitle.setAttribute("data-link",prdtLink);
+                }
+
+                var prdtImg = parentofSelected.querySelector(".swym-wishlist-image-wrapper");
+                if (prdtImg && !prdtImg.classList.contains("updated")) {
+                  var prdtLink = "/search?q=" + prdtHandle.toLowerCase();
+                  prdtImg.classList.add("updated");
+                  prdtImg.setAttribute("data-link",prdtLink);
+                }
+            }*/
+
+            var priceInfo = parentofSelected.querySelector(".swym-product-price");
+            /* if (priceInfo && priceInfo.classList.contains("swym-has-sale")) {
+              cartBtn.classList.add("swym-disabled");
+              cartBtn.disabled = true;
+            } */
+            if (globalBlockList && globalBlockList.length > 0) {
+              var prdtHandleObj = parentofSelected.querySelector("span");
+              var prdtHandle = prdtHandleObj.getAttribute("id");
+              if (prdtHandle && globalBlockList.includes(prdtHandle.toLowerCase())) {
+                cartBtn.classList.add("swym-disabled");
+                cartBtn.classList.add("blocked");
+                cartBtn.disabled = true;
+              } else {
+                cartBtn.classList.add(prdtHandle.toLowerCase());
+              }
+            }
+
+            let additionalNotes = "";
+            if (cartBtn.classList.contains("swym-disabled")) {
+              additionalNotes = cartBtn.innerHTML;
+            }
+            cartBtn.innerHTML = "<img src='/cdn/shop/t/2/assets/add-cart-icon.svg'><div class='wishlist-add-notes'>" + additionalNotes + "</div>";
+          });
+
+          /* $(".swym-title.updated a, .swym-wishlist-image-wrapper.updated a").on("click", function(e) {
+            e.stopPropagation();
+          }); */
+
+          $(".swym-is-button").on("click", function(e) {
+            e.preventDefault();
+            var prdtLink = $(this).siblings(".swym-wishlist-image-wrapper").attr("href");
+            window.location.href = prdtLink;
+          });
+
+          clearInterval(isWishlistLoaded);
+        },500);
+      }
+    }
+  },1000);
+
+  {% when '/account?a=ttrpoints' %}
+  customAcct.id = "{{ customer.id }}";
+  customAcct.membershipTier = "{{ joyTier }}";
+  customAcct.membershipClass = "{{ customerMemberTier }}";
+  customAcct.storeCredits = "$0.00";
+  customAcct.membershipPoints = "{{ pointsDisplay }}";
+
+  toggleMenu("ttrpoints");
+  customHTML += "<div class='custom-ttrpoints-wrapper'>";
+  customHTML += "<div class='tab-header'>My Wallet</div>";
+  customHTML += "<div class='tab-line'>&nbsp;</div>";
+  customHTML += "<div id='ttrpoints-container'>";
+  customHTML += "<div class='ttr-points-h2'>What's In Your Wallet:</div>";
+  if (customAcct.membershipTier || customAcct.membershipPoints || customAcct.storeCredits) {
+    customHTML += "<div class='tier-wrapper " + customAcct.membershipClass + "'>" + customAcct.membershipTier + "</div>";
+    customHTML += "<div class='membership-info-wrapper'>";
+    customHTML += "<div class='ttr-membership-points'>";
+    customHTML += "<div class='point-info'>" + customAcct.membershipPoints + "</div>";
+    customHTML += "<div class='point-label'>TTR Points</div>";
+    customHTML += "<div class='point-footnote'>Your points expiry is one year, redeem now!</div>";
+    customHTML += "</div>";
+    customHTML += "<div class='ttr-membership-storecredits'>";
+    customHTML += "<div class='credit-info store-credits-value'>" + customAcct.storeCredits + "</div>";
+    customHTML += "<div class='credit-label'>Store Credits</div>";
+    //customHTML += "<div class='credit-footnote'>Have a gift card? Click <a href='/apps/vify-gift-card/card/check-balance' target='_blank'><u>here</u></a> to check your balance.</div>";
+    customHTML += "<div class='credit-footnote storecredits-history' data-customer='" +  customAcct.id + "'></div>";
+    customHTML += "</div>";
+    customHTML += "</div>";
+    customHTML += "<div class='tab-line'>&nbsp;</div>";
+    customHTML += "<div class='ttr-points-h2'>Ready To Spend Your Points?</div>";
+    customHTML += "<div class='ttr-points-button'>Redeem here</div>";
+    customHTML += "<div class='ttr-points-footnote'><a href='/pages/membership'><u>Find out</u></a> your membership perks!</div>";
+  }
+  customHTML += "</div>";
+  customHTML += "<div id='ReturngoAccountEmbedding'></div>";
+  customHTML += "</div>";
+
+  {% when '/account?a=wallet' %}
+  customAcct.id = "{{ customer.id }}";
+  customAcct.email = "{{ customer.email }}";
+  customAcct.membershipTier = "{{ joyTier }}";
+  customAcct.membershipClass = "{{ customerMemberTier }}";
+  customAcct.storeCredits = "$0.00";
+  customAcct.membershipPoints = "{{ pointsDisplay }}";
+  customAcct.giftCardOne = "{{ customer.metafields.custom.gift_card_one }}";
+  customAcct.giftCardTwo = "{{ customer.metafields.custom.gift_card_two }}";
+
+  toggleMenu("wallet");
+  customHTML += "<div class='custom-ttrpoints-wrapper'>";
+  customHTML += "<div class='tab-header'>My Wallet</div>";
+  customHTML += "<div class='tab-line'>&nbsp;</div>";
+  customHTML += "<div id='ttrpoints-container'>";
+  customHTML += "<div class='ttr-points-h2'>What's In Your Wallet:</div>";
+  if (customAcct.membershipTier || customAcct.membershipPoints || customAcct.storeCredits) {
+    customHTML += "<div class='tier-wrapper " + customAcct.membershipClass + "'>" + customAcct.membershipTier + "</div>";
+    customHTML += "<div class='membership-info-wrapper'>";
+    customHTML += "<div class='ttr-membership-points'>";
+    customHTML += "<div class='point-info'>" + customAcct.membershipPoints + "</div>";
+    customHTML += "<div class='point-label'>TTR Points</div>";
+    customHTML += "<div class='point-footnote'>Your points expiry is one year, redeem now!</div>";
+    customHTML += "</div>";
+    customHTML += "<div class='ttr-membership-storecredits'>";
+    customHTML += "<div class='credit-info store-credits-value'>" + customAcct.storeCredits + "</div>";
+    customHTML += "<div class='credit-label'>Store Credits</div>";
+    //customHTML += "<div class='credit-footnote'>Have a gift card? Click <a href='/apps/vify-gift-card/card/check-balance' target='_blank'><u>here</u></a> to check your balance.</div>";
+    customHTML += "<div class='credit-footnote storecredits-history' data-customer='" +  customAcct.id + "'></div>";
+    customHTML += "</div>";
+    customHTML += "</div>";
+    customHTML += "<div class='membership-info-wrapper giftcard'>";
+    customHTML += "<div class='ttr-membership-storecredits'>";
+    customHTML += "<div class='credit-info store-credits-value giftcardone-value'>" + customAcct.storeCredits + "</div>";
+    customHTML += "<div class='credit-label'>Gift Card</div>";
+    if (customAcct.giftCardOne != "") {
+      customHTML += "<div class='credit-footnote gift-code'>" + customAcct.giftCardOne + "</div>";
+      customHTML += "<div class='credit-action'><a href='/checkout?discount=" + customAcct.giftCardOne + "'>APPLY TO CHECKOUT</a>&nbsp;&nbsp;|&nbsp;&nbsp;<label data-info='" + customAcct.giftCardOne + "' class='tooltip copy-button'>COPY<input type='checkbox'><span>Copied!</span></label>"  + "</div>";
+      customHTML += "<div class='credit-message giftcardone-msg'></div>";
+    }
+    customHTML += "<div class='credit-footnote'>Have another gift card? Click <a href='/apps/vify-gift-card/card/check-balance' target='_blank'><u>here</u></a> to check your balance.</div>";
+    customHTML += "</div>";
+    customHTML += "<div class='ttr-membership-storecredits'>";
+    /* Do not require
+    customHTML += "<div class='credit-info store-credits-value giftcardtwo-value'>" + customAcct.storeCredits + "</div>";
+    customHTML += "<div class='credit-label'>Gift Card 2</div>";
+    if (customAcct.giftCardTwo != "") {
+      customHTML += "<div class='credit-footnote gift-code'>" + customAcct.giftCardTwo + "</div>";
+      customHTML += "<div class='credit-action'><a href='/checkout?discount=" + customAcct.giftCardTwo + "'>APPLY TO CHECKOUT</a>&nbsp;&nbsp;|&nbsp;&nbsp;<label data-info='" + customAcct.giftCardTwo + "' class='tooltip copy-button'>COPY<input type='checkbox'><span>Copied!</span></label>"  + "</div>";
+      customHTML += "<div class='credit-message giftcardtwo-msg'></div>";
+    }*/
+    customHTML += "</div>";
+    customHTML += "</div>";
+
+    // Custom Gift Card Code
+    customHTML += "<div class='ttr-giftcard-button giftcardone'>+ Link Gift Card</div>";
+    customHTML += "<div id='custom-metaform' class='shopify-block shopify-app-block'><div id='AbER2dnhvd3FzcUtUb__forms_inline_Ba3if9' data-form-root='true' data-forms-id='forms-root-538975' data-forms-text-color='#202020' data-forms-button-background-color='#202020' data-forms-button-label-color='#ffffff' data-forms-links-color='#1878b9' data-forms-errors-color='#e02229' data-forms-text-alignment='center' data-forms-alignment='center' data-forms-padding-top='0' data-forms-padding-right='0' data-forms-padding-bottom='0' data-forms-padding-left='0' style='--inline-container-min-height: 125px'></div></div>";
+
+    customHTML += "<div class='tab-line'>&nbsp;</div>";
+    customHTML += "<div class='ttr-points-h2'>Ready To Spend Your Points?</div>";
+    customHTML += "<div class='ttr-points-button'>Redeem here</div>";
+    customHTML += "<div class='ttr-points-footnote'><a href='/pages/membership'><u>Find out</u></a> your membership perks!</div>";
+  }
+  customHTML += "</div>";
+  customHTML += "<div id='ReturngoAccountEmbedding'></div>";
+  customHTML += "</div>";
+
+  function getGiftCardValue() {
+    var giftCodePrefix = "https://thetinselrack.com/apps/vify-gift-card/card/check-balance/detail/?giftCode=";
+    var giftCodeNotFound = "Gift code not found, check your code.<br/>Please contact enquiries@tinselrack.com if you require assistance";
+    if (customAcct.giftCardOne.trim()) {
+      var giftOneUrl = giftCodePrefix + customAcct.giftCardOne.trim();
+      $.ajax({
+        url:
+        giftOneUrl,
+        type: "GET",
+        success: function (data) {
+          //let x = JSON.stringify(data);
+          //console.log(x);
+          var giftCardOneBal = data.giftCard.balance['amount'];
+          if (giftCardOneBal) {
+            giftCardOneBal = (Math.round(giftCardOneBal * 100) / 100).toFixed(2);
+            $(".giftcardone-value").html('$' + giftCardOneBal);
+          }
+        },
+        error: function (error) {
+          $(".giftcardone-msg").html(giftCodeNotFound);
+          console.log(`Error ${error}`);
+        }
+      });
+    }
+    /* Do not require
+     if (customAcct.giftCardTwo.trim()) {
+         var giftTwoUrl = giftCodePrefix + customAcct.giftCardTwo.trim();
+         $.ajax({
+             url:
+                 giftTwoUrl,
+                 type: "GET",
+             success: function (data) {
+                 var giftCardTwoBal = data.giftCard.balance['amount'];
+                 if (giftCardTwoBal) {
+                   giftCardTwoBal = (Math.round(giftCardTwoBal * 100) / 100).toFixed(2);
+                   $(".giftcardtwo-value").html('$' + giftCardTwoBal);
+                 }
+             },
+             error: function (error) {
+                 $(".giftcardtwo-msg").html(giftCodeNotFound);
+                 console.log(`Error ${error}`);
+             }
+         });
+     } */
+  }
+  getGiftCardValue();
+
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+    }).catch(err => {
+    });
+  }
+
+  {%- endcase -%}
+  {% endif %}
+
+  customHTML += "</div>";
+  document.querySelector(".chContent-Body-Page").insertAdjacentHTML('beforeend',customHTML);
+
+  // Initialize TTR Ambassador Reminder Widget (only for /account page)
+  {% if pageUrl == '/account' %}
+  (function () {
+    'use strict';
+    const mount = document.getElementById('joy-vip-mount-inline');
+    if (!mount) return;
+
+    function money(n) {
+      try {
+        const code =
+          (window.Shopify && Shopify.currency && Shopify.currency.active) ||
+          (window.__JOY__ && __JOY__.shop && __JOY__.shop.currency) ||
+          'USD';
+        return new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currency: String(code),
+          maximumFractionDigits: 0,
+        }).format(Number(n || 0));
+      } catch {
+        return '$' + Math.round(n || 0);
+      }
+    }
+
+    function firstOfNextMonthLabel() {
+      try {
+        const d = new Date();
+        const first = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+        const month = first.toLocaleString(undefined, { month: 'long' });
+        const ordinal = '1st';
+        return `${ordinal} of ${month}`;
+      } catch {
+        return 'the 1st of next month';
+      }
+    }
+
+    function renderCard(data) {
+      try {
+        const dismissed = localStorage.getItem('joy-vip-banner-inline-dismissed');
+        if (dismissed === 'true') return;
+      } catch {}
+
+      const { tierName, threshold, effective, secured, need, exceed, nextDeduct } = data;
+      const pct = Math.max(0, Math.min(1, threshold ? effective / threshold : 1));
+      const deductDate = firstOfNextMonthLabel();
+
+      const explanation =
+        nextDeduct > 0
+          ? secured
+            ? `Note: ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`
+            : `because ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`
+          : '';
+
+      const mainLine = secured
+        ? `You're <strong>${money(exceed)}</strong> above the <strong>${money(
+          threshold
+        )}</strong> requirement. ${explanation}`
+        : `You need <strong>${money(
+          need
+        )}</strong> by cycle end to maintain <strong>${tierName}</strong> ${explanation}`;
+
+      const tierClass = (tierName || '').toLowerCase().replace(/\s+/g, '-');
+
+      const wrap = document.createElement('div');
+      wrap.className = 'joy-vip-card-inline';
+      wrap.innerHTML = `
+        <button class="joy-vip-close-inline" aria-label="Close">✕</button>
+        <div class="joy-vip-head-inline">
+          <div class="joy-vip-badge-inline">${tierName || 'VIP tier'}</div>
+          <div class="joy-vip-badge-inline ${secured ? 'joy-vip-secured-inline' : 'joy-vip-short-inline'}">
+            ${secured ? 'Secured ✓' : 'Keep Going'}
+          </div>
+        </div>
+        <div class="joy-vip-main-text">${mainLine}</div>
+        <div class="joy-vip-meter-inline" aria-hidden="true"><div class="joy-vip-fill-inline ${tierClass}" style="width:${pct * 100}%"></div></div>
+        <div class="joy-vip-row-inline">
+          <div>Counted this cycle</div>
+          <div><strong>${money(effective)}</strong> / ${money(threshold)}</div>
+        </div>
+        <button type="button" class="joy-vip-cta-inline" data-open-widget-inline>View wallet</button>
+      `;
+
+      mount.innerHTML = '';
+      mount.appendChild(wrap);
+      mount.hidden = false;
+
+      wrap.querySelector('.joy-vip-close-inline')?.addEventListener('click', () => {
+        mount.hidden = true;
+        try {
+          localStorage.setItem('joy-vip-banner-inline-dismissed', 'true');
+        } catch {}
+      });
+      wrap.querySelector('[data-open-widget-inline]')?.addEventListener('click', () => {
+        try {
+          const ji = window.joyInstance || window.joy;
+          if (ji?.widget?.open) ji.widget.open('vip');
+          else if (ji?.openWidget) ji.openWidget();
+          else if (ji?.show) ji.show();
+          else window.dispatchEvent(new CustomEvent('joy:open'));
+        } catch (e) {
+          console.warn('Open widget failed', e);
+        }
+      });
+    }
+
+    async function hydrateFromJoy() {
+      try {
+        const ji = window.joyInstance || window.joy;
+        if (!ji) return;
+
+        const [cResp, tResp] = await Promise.all([ji.customer(), ji.tiers()]);
+        const c = cResp || {};
+        const tiers = Array.isArray(tResp) ? tResp : tResp?.data || tResp || [];
+        if (!c || !tiers?.length) return;
+
+        let current = tiers.find((t) => String(t.id) === String(c.tierId));
+        if (!current) {
+          const tp = Number(c.tierPoint || 0);
+          current = tiers
+            .map((t) => ({ ...t, _tg: Number(t.targetPoint ?? t.targetPointUpdate ?? 0) }))
+            .sort((a, b) => a._tg - b._tg)
+            .filter((t) => tp >= t._tg)
+            .pop();
+        }
+
+        const tierName = current?.name || 'VIP tier';
+        const threshold = Number(current?.targetPoint ?? current?.targetPointUpdate ?? 0) || 0;
+
+        const tierPoint = Number(c.tierPoint || 0);
+        const nextDeduct = Number(c.nextDeductedTierAmount || 0);
+        const effective = Math.max(0, tierPoint - nextDeduct);
+
+        const delta = effective - threshold;
+        const secured = delta >= 0;
+        const need = secured ? 0 : Math.abs(delta);
+        const exceed = secured ? delta : 0;
+
+        renderCard({ tierName, threshold, effective, secured, need, exceed, nextDeduct });
+      } catch (err) {
+        console.warn('VIP card error', err);
+      }
+    }
+
+    function run() {
+      try {
+        if (window.joyInstance || window.joy) hydrateFromJoy();
+        window.addEventListener('joy:ready', hydrateFromJoy);
+
+        if (window.Shopify && window.Shopify.designMode) {
+          renderCard({
+            tierName: 'TTR Ambassador',
+            threshold: 850,
+            effective: 770,
+            secured: false,
+            need: 80,
+            exceed: 0,
+            nextDeduct: 100,
+          });
+        }
+      } catch (e) {
+        console.warn('VIP block init error', e);
+      }
+    }
+
+    run();
+  })();
+  {% endif %}
+
+  // Toggle the right menu
+  function toggleMenu(activatedMenu) {
+    let aTags = document.querySelectorAll("#chMobMenu a");
+    aTags.forEach(aTag => {
+      if ((aTag.classList).contains('chContent-Body-Menu-Block-Active')) {
+        aTag.classList.remove('chContent-Body-Menu-Block-Active');
+      }
+      if ((aTag.href).indexOf(activatedMenu) > -1) {
+        aTag.classList.add('chContent-Body-Menu-Block-Active');
+      } else {
+        setTimeout(function() {
+          aTag.classList.remove('chContent-Body-Menu-Block-Active');
+        },200);
+      }
+    });
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Custom Account",
+  "settings": []
+}
+{% endschema %}

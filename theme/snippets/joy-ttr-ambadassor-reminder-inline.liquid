@@ -1,0 +1,197 @@
+{% if customer %}
+    {% style %}
+        .joy-vip-inline-container{margin:40px 0;width:100%}
+        .joy-vip-card-inline{
+        background:#fff;color:#000;border:1px solid #e5e5e5;border-radius:8px;
+        width:100%;padding:32px 40px;
+        font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+        position:relative;box-shadow:0 1px 3px rgba(0,0,0,.05)
+        }
+        .joy-vip-head-inline{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+        .joy-vip-badge-inline{font-size:13px;font-weight:600;background:#e91e63;color:#fff;border:none;padding:6px 16px;border-radius:20px;white-space:nowrap;letter-spacing:0.3px}
+        .joy-vip-secured-inline{background:#10b981;color:#fff}
+        .joy-vip-short-inline{background:#ef4444;color:#fff}
+        .joy-vip-main-text{font-size:16px;line-height:1.6;margin-bottom:20px;color:#333}
+        .joy-vip-row-inline{display:flex;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap;font-size:15px;color:#666}
+        .joy-vip-row-inline strong{color:#000;font-weight:600}
+        .joy-vip-meter-inline{height:6px;background:#f0f0f0;border-radius:10px;overflow:hidden;margin:16px 0}
+        .joy-vip-fill-inline{height:100%;background:#000;transform-origin:left;transition:transform 0.3s ease}
+        .joy-vip-cta-inline{margin-top:20px;display:inline-flex;align-items:center;justify-content:center;background:#000;color:#fff;border:none;padding:14px 28px;border-radius:4px;font-weight:600;font-size:15px;text-decoration:none;cursor:pointer;transition:opacity 0.2s;letter-spacing:0.5px}
+        .joy-vip-cta-inline:hover{opacity:0.85}
+        .joy-vip-close-inline{position:absolute;right:16px;top:16px;background:transparent;border:none;cursor:pointer;color:#999;padding:8px;border-radius:4px;font-size:20px;line-height:1;width:32px;height:32px;display:flex;align-items:center;justify-content:center}
+        .joy-vip-close-inline:hover{background:#f5f5f5;color:#333}
+        @media (max-width:720px){.joy-vip-inline-container{margin:24px 0}.joy-vip-card-inline{padding:24px 20px}.joy-vip-main-text{font-size:15px}.joy-vip-cta-inline{width:100%;padding:16px}}
+    {% endstyle %}
+
+    <div class="joy-vip-inline-container" id="joy-vip-mount-inline" hidden></div>
+
+    <script>
+      (function () {
+        'use strict';
+        const mount = document.getElementById('joy-vip-mount-inline');
+
+        function money(n) {
+          try {
+            const code =
+              (window.Shopify && Shopify.currency && Shopify.currency.active) ||
+              (window.__JOY__ && __JOY__.shop && __JOY__.shop.currency) ||
+              'USD';
+            return new Intl.NumberFormat(undefined, {
+              style: 'currency',
+              currency: String(code),
+              maximumFractionDigits: 0,
+            }).format(Number(n || 0));
+          } catch {
+            return '$' + Math.round(n || 0);
+          }
+        }
+
+        // first day of next month, eg. "1st of October"
+        function firstOfNextMonthLabel() {
+          try {
+            const d = new Date();
+            const first = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+            const month = first.toLocaleString(undefined, { month: 'long' });
+            const ordinal = '1st';
+            return `${ordinal} of ${month}`;
+          } catch {
+            return 'the 1st of next month';
+          }
+        }
+
+        function renderCard(data) {
+          // Check if user has dismissed this banner
+          try {
+            const dismissed = localStorage.getItem('joy-vip-banner-inline-dismissed');
+            if (dismissed === 'true') return;
+          } catch {}
+
+          const { tierName, threshold, effective, secured, need, exceed, nextDeduct } = data;
+          const pct = Math.max(0, Math.min(1, threshold ? effective / threshold : 1));
+          const deductDate = firstOfNextMonthLabel();
+
+          const explanation =
+            nextDeduct > 0
+              ? secured
+                ? `Note: ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`
+                : `because ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`
+              : '';
+
+          const mainLine = secured
+            ? `You're <strong>${money(exceed)}</strong> above the <strong>${money(
+              threshold
+            )}</strong> requirement. ${explanation}`
+            : `You need <strong>${money(
+              need
+            )}</strong> by cycle end to maintain <strong>${tierName}</strong> ${explanation}`;
+
+          const wrap = document.createElement('div');
+          wrap.className = 'joy-vip-card-inline';
+          wrap.innerHTML = `
+      <button class="joy-vip-close-inline" aria-label="Close">✕</button>
+      <div class="joy-vip-head-inline">
+        <div class="joy-vip-badge-inline">${tierName || 'VIP tier'}</div>
+        <div class="joy-vip-badge-inline ${secured ? 'joy-vip-secured-inline' : 'joy-vip-short-inline'}">
+          ${secured ? 'Secured ✓' : 'Action Required'}
+        </div>
+      </div>
+
+      <div class="joy-vip-main-text">${mainLine}</div>
+
+      <div class="joy-vip-meter-inline" aria-hidden="true"><div class="joy-vip-fill-inline" style="transform:scaleX(${pct})"></div></div>
+      <div class="joy-vip-row-inline">
+        <div>Counted this cycle</div>
+        <div><strong>${money(effective)}</strong> / ${money(threshold)}</div>
+      </div>
+
+      <button type="button" class="joy-vip-cta-inline" data-open-widget-inline>VIEW VIP PERKS</button>
+    `;
+
+          mount.innerHTML = '';
+          mount.appendChild(wrap);
+          mount.hidden = false;
+
+          wrap.querySelector('.joy-vip-close-inline')?.addEventListener('click', () => {
+            mount.hidden = true;
+            try {
+              localStorage.setItem('joy-vip-banner-inline-dismissed', 'true');
+            } catch {}
+          });
+          wrap.querySelector('[data-open-widget-inline]')?.addEventListener('click', () => {
+            try {
+              const ji = window.joyInstance || window.joy;
+              if (ji?.widget?.open) ji.widget.open('vip'); // Joy SDK v3 route
+              else if (ji?.openWidget) ji.openWidget(); // older API
+              else if (ji?.show) ji.show(); // fallback
+              else window.dispatchEvent(new CustomEvent('joy:open'));
+            } catch (e) {
+              console.warn('Open widget failed', e);
+            }
+          });
+        }
+
+        async function hydrateFromJoy() {
+          try {
+            const ji = window.joyInstance || window.joy;
+            if (!ji) return;
+
+            const [cResp, tResp] = await Promise.all([ji.customer(), ji.tiers()]);
+            const c = cResp || {};
+            const tiers = Array.isArray(tResp) ? tResp : tResp?.data || tResp || [];
+            if (!c || !tiers?.length) return;
+
+            let current = tiers.find((t) => String(t.id) === String(c.tierId));
+            if (!current) {
+              const tp = Number(c.tierPoint || 0);
+              current = tiers
+                .map((t) => ({ ...t, _tg: Number(t.targetPoint ?? t.targetPointUpdate ?? 0) }))
+                .sort((a, b) => a._tg - b._tg)
+                .filter((t) => tp >= t._tg)
+                .pop();
+            }
+
+            const tierName = current?.name || 'VIP tier';
+            const threshold = Number(current?.targetPoint ?? current?.targetPointUpdate ?? 0) || 0;
+
+            const tierPoint = Number(c.tierPoint || 0);
+            const nextDeduct = Number(c.nextDeductedTierAmount || 0);
+            const effective = Math.max(0, tierPoint - nextDeduct);
+
+            const delta = effective - threshold;
+            const secured = delta >= 0;
+            const need = secured ? 0 : Math.abs(delta);
+            const exceed = secured ? delta : 0;
+
+            renderCard({ tierName, threshold, effective, secured, need, exceed, nextDeduct });
+          } catch (err) {
+            console.warn('VIP card error', err);
+          }
+        }
+
+        function run() {
+          try {
+            // live
+            if (window.joyInstance || window.joy) hydrateFromJoy();
+            window.addEventListener('joy:ready', hydrateFromJoy);
+
+            // editor preview
+            if (window.Shopify && window.Shopify.designMode) {
+              renderCard({
+                tierName: 'TTR Ambassador',
+                threshold: 850,
+                effective: 770,
+                secured: false,
+                need: 80,
+                exceed: 0,
+                nextDeduct: 100,
+              });
+            }
+          } catch (e) {
+            console.warn('VIP block init error', e);
+          }
+        }
+
+        run();
+      })();
+    </script>
+{% endif %}
