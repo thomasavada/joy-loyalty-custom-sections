@@ -1,0 +1,173 @@
+{% if customer %}
+    {% style %}
+        .joy-vip-banner{position:fixed;right:16px;bottom:16px;z-index:2147483646}
+        .joy-vip-card{
+        background:#fff;color:#222;border:1px solid rgba(0,0,0,.08);
+        box-shadow:0 10px 30px rgba(0,0,0,.12);border-radius:16px;
+        max-width:360px;padding:14px 16px;font:500 14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"
+        }
+        .joy-vip-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+        .joy-vip-badge{font-size:12px;font-weight:700;background:#f4f4f5;border:1px solid rgba(0,0,0,.08);padding:4px 10px;border-radius:999px;white-space:nowrap}
+        .joy-vip-secured{color:#077a36;background:#e8f7ef;border-color:#bde8d1}
+        .joy-vip-short{color:#8a2d19;background:#fff1ee;border-color:#ffd5cb}
+        .joy-vip-row{display:flex;justify-content:space-between;gap:10px;margin-top:6px}
+        .joy-vip-meter{height:8px;background:#f3f4f6;border-radius:999px;overflow:hidden;margin:10px 0 2px}
+        .joy-vip-fill{height:100%;background:#111;transform-origin:left;transform:scaleX(0)}
+        .joy-vip-cta{margin-top:10px;display:inline-flex;align-items:center;gap:8px;background:#111;color:#fff;border:1px solid rgba(0,0,0,.08);padding:10px 14px;border-radius:12px;font-weight:700;text-decoration:none;cursor:pointer}
+        .joy-vip-close{position:absolute;right:8px;top:8px;background:transparent;border:none;cursor:pointer;color:#666;padding:4px;border-radius:6px}
+        .joy-vip-close:hover{background:rgba(0,0,0,.06)}
+        @media (max-width:720px){.joy-vip-banner{left:8px;right:8px;bottom:12px}.joy-vip-card{max-width:none}}
+    {% endstyle %}
+
+    <div class="joy-vip-banner" id="joy-vip-mount" hidden></div>
+
+    <script>
+      (function(){
+        "use strict";
+        const mount = document.getElementById('joy-vip-mount');
+
+        function money(n){
+          try{
+            const code =
+              (window.Shopify && Shopify.currency && Shopify.currency.active) ||
+              (window.__JOY__ && __JOY__.shop && __JOY__.shop.currency) ||
+              'USD';
+            return new Intl.NumberFormat(undefined,{style:'currency',currency:String(code),maximumFractionDigits:0}).format(Number(n||0));
+          }catch{ return '$' + Math.round(n||0); }
+        }
+
+        // first day of next month, eg. "1st of October"
+        function firstOfNextMonthLabel(){
+          try{
+            const d = new Date();
+            const first = new Date(d.getFullYear(), d.getMonth()+1, 1);
+            const month = first.toLocaleString(undefined, { month:'long' });
+            const ordinal = '1st';
+            return `${ordinal} of ${month}`;
+          }catch{ return 'the 1st of next month'; }
+        }
+
+        function renderCard(data){
+          // Check if user has dismissed this banner
+          try{
+            const dismissed = localStorage.getItem('joy-vip-banner-dismissed');
+            if (dismissed === 'true') return;
+          }catch{}
+
+          const { tierName, threshold, effective, secured, need, exceed, nextDeduct } = data;
+          const pct = Math.max(0, Math.min(1, threshold ? (effective/threshold) : 1));
+          const deductDate = firstOfNextMonthLabel();
+
+          const explanation = nextDeduct > 0
+            ? (secured
+              ? `Note: ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`
+              : `because ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`)
+            : '';
+
+          const mainLine = secured
+            ? `You're <strong>${money(exceed)}</strong> above the <strong>${money(threshold)}</strong> requirement. ${explanation}`
+            : `You need <strong>${money(need)}</strong> by cycle end to maintain <strong>${tierName}</strong> ${explanation}`;
+
+          const wrap = document.createElement('div');
+          wrap.className = 'joy-vip-card';
+          wrap.innerHTML = `
+      <button class="joy-vip-close" aria-label="Close">✕</button>
+      <div class="joy-vip-head">
+        <div class="joy-vip-badge">${tierName || 'VIP tier'}</div>
+        <div class="joy-vip-badge ${secured ? 'joy-vip-secured' : 'joy-vip-short'}">
+          ${secured ? 'Secured' : 'Spend more to stay'}
+        </div>
+      </div>
+
+      <div>${mainLine}</div>
+
+      <div class="joy-vip-meter" aria-hidden="true"><div class="joy-vip-fill" style="transform:scaleX(${pct})"></div></div>
+      <div class="joy-vip-row">
+        <div>Counted this cycle</div>
+        <div><strong>${money(effective)}</strong> / ${money(threshold)}</div>
+      </div>
+
+      <button type="button" class="joy-vip-cta" data-open-widget>Open VIP perks</button>
+    `;
+
+          mount.innerHTML = '';
+          mount.appendChild(wrap);
+          mount.hidden = false;
+
+          wrap.querySelector('.joy-vip-close')?.addEventListener('click', ()=> {
+            mount.hidden = true;
+            try{
+              localStorage.setItem('joy-vip-banner-dismissed', 'true');
+            }catch{}
+          });
+          wrap.querySelector('[data-open-widget]')?.addEventListener('click', ()=>{
+            try{
+              const ji = window.joyInstance || window.joy;
+              if (ji?.widget?.open) ji.widget.open('vip');        // Joy SDK v3 route
+              else if (ji?.openWidget) ji.openWidget();           // older API
+              else if (ji?.show) ji.show();                       // fallback
+              else window.dispatchEvent(new CustomEvent('joy:open'));
+            }catch(e){ console.warn('Open widget failed', e); }
+          });
+        }
+
+        async function hydrateFromJoy(){
+          try{
+            const ji = window.joyInstance || window.joy;
+            if (!ji) return;
+
+            const [cResp, tResp] = await Promise.all([ ji.customer(), ji.tiers() ]);
+            const c = cResp || {};
+            const tiers = Array.isArray(tResp) ? tResp : (tResp?.data || tResp || []);
+            if (!c || !tiers?.length) return;
+
+            let current = tiers.find(t => String(t.id) === String(c.tierId));
+            if (!current){
+              const tp = Number(c.tierPoint||0);
+              current = tiers
+                .map(t => ({...t, _tg: Number(t.targetPoint ?? t.targetPointUpdate ?? 0)}))
+                .sort((a,b)=>a._tg-b._tg)
+                .filter(t => tp >= t._tg).pop();
+            }
+
+            const tierName   = current?.name || 'VIP tier';
+            const threshold  = Number(current?.targetPoint ?? current?.targetPointUpdate ?? 0) || 0;
+
+            const tierPoint  = Number(c.tierPoint || 0);
+            const nextDeduct = Number(c.nextDeductedTierAmount || 0);
+            const effective  = Math.max(0, tierPoint - nextDeduct);
+
+            const delta   = effective - threshold;
+            const secured = delta >= 0;
+            const need    = secured ? 0 : Math.abs(delta);
+            const exceed  = secured ? delta : 0;
+
+            renderCard({ tierName, threshold, effective, secured, need, exceed, nextDeduct });
+          }catch(err){ console.warn('VIP card error', err); }
+        }
+
+        function run(){
+          try{
+            // live
+            if (window.joyInstance || window.joy) hydrateFromJoy();
+            window.addEventListener('joy:ready', hydrateFromJoy);
+
+            // editor preview
+            if (window.Shopify && window.Shopify.designMode){
+              renderCard({
+                tierName: 'TTR Ambassador',
+                threshold: 850,
+                effective: 770,
+                secured: false,
+                need: 80,
+                exceed: 0,
+                nextDeduct: 100
+              });
+            }
+          }catch(e){ console.warn('VIP block init error', e); }
+        }
+
+        run();
+      })();
+    </script>
+{% endif %}
