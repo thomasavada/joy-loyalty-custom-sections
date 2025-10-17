@@ -989,7 +989,7 @@
         ? `You're <strong>${money(exceed)}</strong> above the <strong>${money(
           threshold
         )}</strong> requirement.`
-        : `You're <strong>${money(need)}</strong> below the <strong>${money(threshold)}</strong> ${tierName} requirement.`;
+        : `Spend <strong>${money(need)}</strong> by ${deductDate} to maintain ${tierName}.`;
 
       // Build detailed breakdown section
       const detailsSection = `
@@ -999,8 +999,8 @@
             <p style="margin:12px 0 8px;font-weight:600;">Your tier status is based on a rolling 6-month window:</p>
             <ul>
               <li><strong>Total spending tracked:</strong> ${money(tierPoint || effective)} (from ${sixMonthsAgoStr} to today)</li>
-              <li><strong>Expiring next cycle:</strong> ${money(nextDeduct)} (spent in ${sixMonthsAgo.toLocaleString('en-US', { month: 'long' })}, deducted on ${deductDate})</li>
-              <li><strong>Your next month spending:</strong> ${money(effective)} (total minus expiring) ${secured ? `You've secured your ${tierName} status and perks for next cycle!` : `to maintain ${tierName} status, you need to spend ${money(need)} more to reach the ${money(threshold)} requirement.`}</li>
+              <li><strong>Expiring next month:</strong> ${money(nextDeduct)} (spent in ${sixMonthsAgo.toLocaleString('en-US', { month: 'long' })}, deducted on ${deductDate})</li>
+              <li><strong>Your next month spending:</strong> ${money(effective)} (total minus expiring) ${secured ? `You've secured your ${tierName} status and perks for the month!` : `to maintain ${tierName} status, you need to spend ${money(need)} more to reach the ${money(threshold)} requirement.`}</li>
             </ul>
           </div>
         </div>
@@ -1072,6 +1072,10 @@
         const c = cResp || {};
         const tiers = Array.isArray(tResp) ? tResp : tResp?.data || tResp || [];
         if (!c || !tiers?.length) return;
+
+        // Only show widget for TTR Ambassador tier
+        const ambassadorTierId = '6a7556b7-fdca-4197-a76a-27cf8c47a49a';
+        if (String(c.tierId) !== ambassadorTierId) return;
 
         let current = tiers.find((t) => String(t.id) === String(c.tierId));
         if (!current) {
