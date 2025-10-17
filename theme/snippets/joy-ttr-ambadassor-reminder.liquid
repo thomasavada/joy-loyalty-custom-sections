@@ -22,51 +22,64 @@
     <div class="joy-vip-banner" id="joy-vip-mount" hidden></div>
 
     <script>
-      (function(){
-        "use strict";
+      (function () {
+        'use strict';
         const mount = document.getElementById('joy-vip-mount');
 
-        function money(n){
-          try{
+        function money(n) {
+          try {
             const code =
               (window.Shopify && Shopify.currency && Shopify.currency.active) ||
               (window.__JOY__ && __JOY__.shop && __JOY__.shop.currency) ||
               'USD';
-            return new Intl.NumberFormat(undefined,{style:'currency',currency:String(code),maximumFractionDigits:0}).format(Number(n||0));
-          }catch{ return '$' + Math.round(n||0); }
+            return new Intl.NumberFormat(undefined, {
+              style: 'currency',
+              currency: String(code),
+              maximumFractionDigits: 0,
+            }).format(Number(n || 0));
+          } catch {
+            return '$' + Math.round(n || 0);
+          }
         }
 
         // first day of next month, eg. "1st of October"
-        function firstOfNextMonthLabel(){
-          try{
+        function firstOfNextMonthLabel() {
+          try {
             const d = new Date();
-            const first = new Date(d.getFullYear(), d.getMonth()+1, 1);
-            const month = first.toLocaleString(undefined, { month:'long' });
+            const first = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+            const month = first.toLocaleString(undefined, { month: 'long' });
             const ordinal = '1st';
             return `${ordinal} of ${month}`;
-          }catch{ return 'the 1st of next month'; }
+          } catch {
+            return 'the 1st of next month';
+          }
         }
 
-        function renderCard(data){
+        function renderCard(data) {
           // Check if user has dismissed this banner
-          try{
+          try {
             const dismissed = localStorage.getItem('joy-vip-banner-dismissed');
             if (dismissed === 'true') return;
-          }catch{}
+          } catch {}
 
           const { tierName, threshold, effective, secured, need, exceed, nextDeduct } = data;
-          const pct = Math.max(0, Math.min(1, threshold ? (effective/threshold) : 1));
+          const pct = Math.max(0, Math.min(1, threshold ? effective / threshold : 1));
           const deductDate = firstOfNextMonthLabel();
 
-          const explanation = nextDeduct > 0
-            ? (secured
-              ? `Note: ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`
-              : `because ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`)
-            : '';
+          const explanation =
+            nextDeduct > 0
+              ? secured
+                ? `Note: ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`
+                : `because ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`
+              : '';
 
           const mainLine = secured
-            ? `You're <strong>${money(exceed)}</strong> above the <strong>${money(threshold)}</strong> requirement. ${explanation}`
-            : `You need <strong>${money(need)}</strong> by cycle end to maintain <strong>${tierName}</strong> ${explanation}`;
+            ? `You're <strong>${money(exceed)}</strong> above the <strong>${money(
+              threshold
+            )}</strong> requirement. ${explanation}`
+            : `You need <strong>${money(
+              need
+            )}</strong> by cycle end to maintain <strong>${tierName}</strong> ${explanation}`;
 
           const wrap = document.createElement('div');
           wrap.className = 'joy-vip-card';
@@ -94,66 +107,71 @@
           mount.appendChild(wrap);
           mount.hidden = false;
 
-          wrap.querySelector('.joy-vip-close')?.addEventListener('click', ()=> {
+          wrap.querySelector('.joy-vip-close')?.addEventListener('click', () => {
             mount.hidden = true;
-            try{
+            try {
               localStorage.setItem('joy-vip-banner-dismissed', 'true');
-            }catch{}
+            } catch {}
           });
-          wrap.querySelector('[data-open-widget]')?.addEventListener('click', ()=>{
-            try{
+          wrap.querySelector('[data-open-widget]')?.addEventListener('click', () => {
+            try {
               const ji = window.joyInstance || window.joy;
-              if (ji?.widget?.open) ji.widget.open('vip');        // Joy SDK v3 route
-              else if (ji?.openWidget) ji.openWidget();           // older API
-              else if (ji?.show) ji.show();                       // fallback
+              if (ji?.widget?.open) ji.widget.open('vip'); // Joy SDK v3 route
+              else if (ji?.openWidget) ji.openWidget(); // older API
+              else if (ji?.show) ji.show(); // fallback
               else window.dispatchEvent(new CustomEvent('joy:open'));
-            }catch(e){ console.warn('Open widget failed', e); }
+            } catch (e) {
+              console.warn('Open widget failed', e);
+            }
           });
         }
 
-        async function hydrateFromJoy(){
-          try{
+        async function hydrateFromJoy() {
+          try {
             const ji = window.joyInstance || window.joy;
             if (!ji) return;
 
-            const [cResp, tResp] = await Promise.all([ ji.customer(), ji.tiers() ]);
+            const [cResp, tResp] = await Promise.all([ji.customer(), ji.tiers()]);
             const c = cResp || {};
-            const tiers = Array.isArray(tResp) ? tResp : (tResp?.data || tResp || []);
+            const tiers = Array.isArray(tResp) ? tResp : tResp?.data || tResp || [];
             if (!c || !tiers?.length) return;
 
-            let current = tiers.find(t => String(t.id) === String(c.tierId));
-            if (!current){
-              const tp = Number(c.tierPoint||0);
+            let current = tiers.find((t) => String(t.id) === String(c.tierId));
+            if (!current) {
+              const tp = Number(c.tierPoint || 0);
               current = tiers
-                .map(t => ({...t, _tg: Number(t.targetPoint ?? t.targetPointUpdate ?? 0)}))
-                .sort((a,b)=>a._tg-b._tg)
-                .filter(t => tp >= t._tg).pop();
+                .map((t) => ({ ...t, _tg: Number(t.targetPoint ?? t.targetPointUpdate ?? 0) }))
+                .sort((a, b) => a._tg - b._tg)
+                .filter((t) => tp >= t._tg)
+                .pop();
             }
 
-            const tierName   = current?.name || 'VIP tier';
-            const threshold  = Number(current?.targetPoint ?? current?.targetPointUpdate ?? 0) || 0;
+            const tierName = current?.name || 'VIP tier';
+            const threshold = Number(current?.targetPoint ?? current?.targetPointUpdate ?? 0) || 0;
 
-            const tierPoint  = Number(c.tierPoint || 0);
+            const tierPoint = Number(c.tierPoint || 0);
             const nextDeduct = Number(c.nextDeductedTierAmount || 0);
-            const effective  = Math.max(0, tierPoint - nextDeduct);
+            const effective = Math.max(0, tierPoint - nextDeduct);
 
-            const delta   = effective - threshold;
+            const delta = effective - threshold;
             const secured = delta >= 0;
-            const need    = secured ? 0 : Math.abs(delta);
-            const exceed  = secured ? delta : 0;
+            const need = secured ? 0 : Math.abs(delta);
+            const exceed = secured ? delta : 0;
 
             renderCard({ tierName, threshold, effective, secured, need, exceed, nextDeduct });
-          }catch(err){ console.warn('VIP card error', err); }
+          } catch (err) {
+            console.warn('VIP card error', err);
+          }
         }
 
-        function run(){
-          try{
+        function run() {
+          try {
             // live
             if (window.joyInstance || window.joy) hydrateFromJoy();
             window.addEventListener('joy:ready', hydrateFromJoy);
 
             // editor preview
-            if (window.Shopify && window.Shopify.designMode){
+            if (window.Shopify && window.Shopify.designMode) {
               renderCard({
                 tierName: 'TTR Ambassador',
                 threshold: 850,
@@ -161,10 +179,12 @@
                 secured: false,
                 need: 80,
                 exceed: 0,
-                nextDeduct: 100
+                nextDeduct: 100,
               });
             }
-          }catch(e){ console.warn('VIP block init error', e); }
+          } catch (e) {
+            console.warn('VIP block init error', e);
+          }
         }
 
         run();
