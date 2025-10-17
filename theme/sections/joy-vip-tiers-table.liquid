@@ -510,7 +510,7 @@ if (!customElements.get('joy-vip-tiers-table')) {
       const rowSettings = this.getRowSettings();
 
       // Build table header
-      const showIcons = {{ section.settings.show_tier_icons | default: true }};
+      const showIcons = {{ section.settings.show_tier_icons | json }};
       let headerHtml = '<tr><th></th>';
       tiers.forEach(tier => {
         const isCurrentTier = this.currentCustomerTier === tier.name;
