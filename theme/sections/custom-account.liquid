@@ -344,6 +344,14 @@
     customHTML += ".joy-vip-main-text{font-size:14px;line-height:1.6;margin-bottom:16px;color:#444;text-align:left}";
     customHTML += ".joy-vip-row-inline{display:flex;justify-content:space-between;gap:10px;margin:10px 0px;flex-wrap:wrap;font-size:13px;color:#666;text-align:left}";
     customHTML += ".joy-vip-row-inline strong{color:#000;font-weight:600}";
+    customHTML += ".joy-vip-details-section{margin:16px 0px;padding-top:16px;border-top:1px solid #e5e5e5;text-align:left}";
+    customHTML += ".joy-vip-details-section ul{list-style:none;padding:0;margin:8px 0;font-size:13px;color:#444;line-height:1.8}";
+    customHTML += ".joy-vip-details-section ul li{margin:6px 0}";
+    customHTML += ".joy-vip-details-section ul li strong{color:#000;font-weight:600}";
+    customHTML += ".joy-vip-toggle-link{font-size:13px;color:#1878b9;text-decoration:underline;cursor:pointer;margin-top:8px;display:inline-block}";
+    customHTML += ".joy-vip-toggle-link:hover{opacity:0.85}";
+    customHTML += ".joy-vip-details-content{display:none}";
+    customHTML += ".joy-vip-details-content.show{display:block}";
     customHTML += ".joy-vip-meter-inline{height:11px;background:transparent;border:1px solid var(--color-black);border-radius:10px;overflow:visible;margin:14px 0 8px;padding:0;position:relative}";
     customHTML += ".joy-vip-fill-inline{display:block !important;height:100%;width:0%;background:var(--color-black);border-radius:9px;transition:width 0.3s ease;position:relative}";
     customHTML += ".joy-vip-fill-inline:after{content:'';position:absolute;top:-5px;right:-10px;width:20px;height:20px;background-image:url('/cdn/shop/t/2/assets/progress-bar-smiley.svg');background-size:cover;background-repeat:no-repeat;display:inline-block;opacity:1;transition:opacity 0.3s ease}";
@@ -967,24 +975,36 @@
         if (dismissed === 'true') return;
       } catch {}
 
-      const { tierName, threshold, effective, secured, need, exceed, nextDeduct } = data;
+      const { tierName, threshold, effective, secured, need, exceed, nextDeduct, tierPoint } = data;
       const pct = Math.max(0, Math.min(1, threshold ? effective / threshold : 1));
       const deductDate = firstOfNextMonthLabel();
 
-      const explanation =
-        nextDeduct > 0
-          ? secured
-            ? `Note: ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`
-            : `because ${money(nextDeduct)} will be deducted from your tier spending on ${deductDate}.`
-          : '';
+      // Calculate 6 months ago date for display
+      const today = new Date();
+      const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 6, 1);
+      const sixMonthsAgoStr = sixMonthsAgo.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+      const todayStr = today.toLocaleString('en-US', { month: 'short', day: 'numeric' });
 
       const mainLine = secured
         ? `You're <strong>${money(exceed)}</strong> above the <strong>${money(
           threshold
-        )}</strong> requirement. ${explanation}`
-        : `You need <strong>${money(
-          need
-        )}</strong> by cycle end to maintain <strong>${tierName}</strong> ${explanation}`;
+        )}</strong> requirement.`
+        : `You're <strong>${money(need)}</strong> below the <strong>${money(threshold)}</strong> ${tierName} requirement.`;
+
+      // Build detailed breakdown section
+      const detailsSection = `
+        <div class="joy-vip-details-section">
+          <a href="#" class="joy-vip-toggle-link" data-toggle-details>How is this calculated?</a>
+          <div class="joy-vip-details-content">
+            <p style="margin:12px 0 8px;font-weight:600;">Your tier status is based on a rolling 6-month window:</p>
+            <ul>
+              <li><strong>Total spending tracked:</strong> ${money(tierPoint || effective)} (from ${sixMonthsAgoStr} to today)</li>
+              <li><strong>Expiring next cycle:</strong> ${money(nextDeduct)} (spent in ${sixMonthsAgo.toLocaleString('en-US', { month: 'long' })}, deducted on ${deductDate})</li>
+              <li><strong>Your next month spending:</strong> ${money(effective)} (total minus expiring) ${secured ? `You've secured your ${tierName} status and perks for next cycle!` : `to maintain ${tierName} status, you need to spend ${money(need)} more to reach the ${money(threshold)} requirement.`}</li>
+            </ul>
+          </div>
+        </div>
+      `;
 
       const tierClass = (tierName || '').toLowerCase().replace(/\s+/g, '-');
 
@@ -995,7 +1015,7 @@
         <div class="joy-vip-head-inline">
           <div class="joy-vip-badge-inline">${tierName || 'VIP tier'}</div>
           <div class="joy-vip-badge-inline ${secured ? 'joy-vip-secured-inline' : 'joy-vip-short-inline'}">
-            ${secured ? 'Secured ✓' : 'Keep Going'}
+            ${secured ? 'Completed' : 'Keep Going'}
           </div>
         </div>
         <div class="joy-vip-main-text">${mainLine}</div>
@@ -1004,6 +1024,7 @@
           <div>Counted this cycle</div>
           <div><strong>${money(effective)}</strong> / ${money(threshold)}</div>
         </div>
+        ${detailsSection}
         <button type="button" class="joy-vip-cta-inline" data-open-widget-inline>View wallet</button>
       `;
 
@@ -1017,6 +1038,18 @@
           localStorage.setItem('joy-vip-banner-inline-dismissed', 'true');
         } catch {}
       });
+
+      // Toggle details section
+      const toggleLink = wrap.querySelector('[data-toggle-details]');
+      const detailsContent = wrap.querySelector('.joy-vip-details-content');
+      toggleLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        detailsContent.classList.toggle('show');
+        toggleLink.textContent = detailsContent.classList.contains('show')
+          ? 'Show summary'
+          : 'How is this calculated?';
+      });
+
       wrap.querySelector('[data-open-widget-inline]')?.addEventListener('click', () => {
         try {
           const ji = window.joyInstance || window.joy;
@@ -1062,7 +1095,7 @@
         const need = secured ? 0 : Math.abs(delta);
         const exceed = secured ? delta : 0;
 
-        renderCard({ tierName, threshold, effective, secured, need, exceed, nextDeduct });
+        renderCard({ tierName, threshold, effective, secured, need, exceed, nextDeduct, tierPoint });
       } catch (err) {
         console.warn('VIP card error', err);
       }
@@ -1082,6 +1115,7 @@
             need: 80,
             exceed: 0,
             nextDeduct: 100,
+            tierPoint: 870,
           });
         }
       } catch (e) {
