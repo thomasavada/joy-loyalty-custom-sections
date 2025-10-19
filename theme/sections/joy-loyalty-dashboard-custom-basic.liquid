@@ -64,36 +64,73 @@
 
 {% raw %}
     <script>
-        // Loyalty Status Component - Standalone
+        /**
+         * Joy Loyalty Status Component
+         * Displays customer loyalty information including tier, points, coupons, and activity history
+         */
         class JoyLoyaltyStatus extends HTMLElement {
+            // ============================================================================
+            // Constants
+            // ============================================================================
+
+            static DEFAULT_ITEMS_PER_PAGE = 5;
+            static TAB_COUPONS = 'coupons';
+            static TAB_HISTORY = 'history';
+
+            // Event types
+            static EVENT_FREE_SHIPPING = 'free_shipping';
+            static EVENT_FREE_GIFT = 'free_gift';
+            static EVENT_BUY_X_GET_Y = 'buy_x_get_y';
+            static EVENT_AMOUNT_DISCOUNT = 'amount_discount';
+            static EVENT_PERCENTAGE_DISCOUNT = 'percentage_discount';
+            static EVENT_REFERRAL_FRIEND = 'referral_friend';
+            static EVENT_MILESTONE = 'milestone';
+
+            // Tier entry methods
+            static ENTRY_METHOD_POINTS = 'point_earned';
+            static ENTRY_METHOD_MONEY = 'money_spent';
+            static ENTRY_METHOD_ORDERS = 'number_of_orders';
+
             constructor() {
                 super();
-                this.currentTab = 'coupons';
+
+                // Component state
+                this.currentTab = JoyLoyaltyStatus.TAB_COUPONS;
+                this.isInitialized = false;
+                this.isInitializing = false;
+                this.joyReadyHandler = null;
+
+                // Data stores
                 this.tierData = null;
                 this.customerData = null;
                 this.couponsData = null;
                 this.pointsHistoryData = null;
+
+                // Loading states
+                this.isLoadingCoupons = false;
+                this.isLoadingHistory = false;
+
+                // Display settings from data attributes
                 this.customerId = this.dataset.customerId;
                 this.showTierCard = this.dataset.showTierCard === 'true';
                 this.showPoints = this.dataset.showPoints === 'true';
                 this.showProgress = this.dataset.showProgress === 'true';
                 this.showTabs = this.dataset.showTabs === 'true';
-                this.isLoadingCoupons = false;
-                this.isLoadingHistory = false;
-                this.isInitialized = false;
-                this.isInitializing = false;
-                this.joyReadyHandler = null;
+                this.showPagination = this.dataset.showPagination === 'true';
 
                 // Pagination state
+                this.itemsPerPage = parseInt(this.dataset.itemsPerPage) || JoyLoyaltyStatus.DEFAULT_ITEMS_PER_PAGE;
                 this.couponsPage = 1;
                 this.historyPage = 1;
                 this.couponsParams = { before: '', after: '' };
                 this.historyParams = { before: '', after: '' };
                 this.couponsPageInfo = { hasNext: false, hasPre: false };
                 this.historyPageInfo = { hasNext: false, hasPre: false };
-                this.itemsPerPage = parseInt(this.dataset.itemsPerPage) || 5;
-                this.showPagination = this.dataset.showPagination === 'true';
             }
+
+            // ============================================================================
+            // Lifecycle Methods
+            // ============================================================================
 
             connectedCallback() {
                 // Prevent multiple initializations
@@ -109,12 +146,15 @@
             }
 
             cleanup() {
-                // Remove event listener
                 if (this.joyReadyHandler) {
                     window.removeEventListener('joy:ready', this.joyReadyHandler);
                     this.joyReadyHandler = null;
                 }
             }
+
+            // ============================================================================
+            // Initialization
+            // ============================================================================
 
             initializeComponent() {
                 // Create bound handler for event listener
@@ -185,6 +225,15 @@
                 }
             }
 
+            // ============================================================================
+            // Data Loading Methods
+            // ============================================================================
+
+            /**
+             * Load customer data from Joy SDK
+             * @param {Object} joyInstance - Joy SDK instance
+             * @returns {Promise<Object|null>} Customer data or null
+             */
             async loadCustomerData(joyInstance) {
                 if (!this.customerId) {
                     return null;
@@ -201,6 +250,10 @@
                 }
             }
 
+            /**
+             * Load tier data and determine customer's current tier
+             * @param {Object} joyInstance - Joy SDK instance
+             */
             async loadTierData(joyInstance) {
                 try {
                     // Get all tiers
@@ -241,6 +294,11 @@
                 }
             }
 
+            /**
+             * Load customer coupons/rewards
+             * @param {Object} joyInstance - Joy SDK instance
+             * @param {Object|null} params - Pagination parameters
+             */
             async loadCoupons(joyInstance, params = null) {
                 try {
                     this.isLoadingCoupons = true;
@@ -287,6 +345,11 @@
                 }
             }
 
+            /**
+             * Load customer points history/activity
+             * @param {Object} joyInstance - Joy SDK instance
+             * @param {Object|null} params - Pagination parameters
+             */
             async loadPointsHistory(joyInstance, params = null) {
                 try {
                     this.isLoadingHistory = true;
@@ -321,6 +384,10 @@
                 }
             }
 
+            // ============================================================================
+            // Helper Methods
+            // ============================================================================
+
             getCustomerPoints() {
                 try {
                     // Try customer data first
@@ -351,6 +418,10 @@
                     plural: window.AVADA_JOY?.settings?.pointPlural || 'points'
                 };
             }
+
+            // ============================================================================
+            // Validation Methods
+            // ============================================================================
 
             /**
              * Check if voucher is applicable - replicates isVoucherApplicable logic
@@ -412,6 +483,10 @@
                 return messages[reason] || this.i18n('This coupon cannot be applied', translation);
             }
 
+            // ============================================================================
+            // Formatting Methods
+            // ============================================================================
+
             /**
              * Format discount value for a coupon - replicates prepareDiscountValue logic
              */
@@ -441,10 +516,10 @@
 
                 // Handle different event types based on prepareDiscountValue.js
                 switch (event) {
-                    case 'free_shipping':
+                    case JoyLoyaltyStatus.EVENT_FREE_SHIPPING:
                         return this.i18n('Free shipping', translation);
 
-                    case 'free_gift':
+                    case JoyLoyaltyStatus.EVENT_FREE_GIFT:
                         if (freeProductQuantity === 1 && specificProducts.length > 0) {
                             const product = specificProducts.find(p => {
                                 const variantIds = (p.variants || []).map(v => v.id);
@@ -464,7 +539,7 @@
                         }
                         return this.i18n('Free gift', translation);
 
-                    case 'buy_x_get_y':
+                    case JoyLoyaltyStatus.EVENT_BUY_X_GET_Y:
                         const listNameShow = [];
                         const isApplyToProduct = appliedToGets === 'specific_product';
 
@@ -498,7 +573,7 @@
 
                         return `${this.i18n('Free', translation)} ${listNameShow.length} ${translateUnit}: ${listNameShow.join(', ')}`;
 
-                    case 'amount_discount':
+                    case JoyLoyaltyStatus.EVENT_AMOUNT_DISCOUNT:
                         if (redeemType !== 'dynamic') {
                             return this.i18n('Discount {{discount_value}} off', translation, {
                                 discount_value: this.formatCurrency(parseInt(earnAmount), currency)
@@ -509,12 +584,12 @@
                             discount_value: this.formatCurrency(dynamicAmount, currency)
                         });
 
-                    case 'percentage_discount':
+                    case JoyLoyaltyStatus.EVENT_PERCENTAGE_DISCOUNT:
                         return this.i18n('Discount {{discount_value}} off', translation, {
                             discount_value: earnAmount + '%'
                         });
 
-                    case 'referral_friend':
+                    case JoyLoyaltyStatus.EVENT_REFERRAL_FRIEND:
                         const fieldEarnValue = !referralCustomerEmail
                             ? 'customerRewardEarnAmount'
                             : 'friendRewardEarnAmount';
@@ -530,7 +605,7 @@
                             discount_value: discountValue
                         });
 
-                    case 'milestone':
+                    case JoyLoyaltyStatus.EVENT_MILESTONE:
                         if (action === 'discount_amount') {
                             return this.i18n('Discount {{discount_value}} off', translation, {
                                 discount_value: this.formatCurrency(parseInt(earnAmount), currency)
@@ -817,6 +892,10 @@
                 return text || '';
             }
 
+            // ============================================================================
+            // Rendering Methods
+            // ============================================================================
+
             renderGuestState() {
                 const translation = window.AVADA_JOY?.primaryTranslation || {};
                 this.innerHTML = `
@@ -907,15 +986,15 @@
 
                     // Use correct translation key based on tier entry method (match descriptionProgress.js)
                     const isNextRank = tierPoint >= currentMinPoint && tierPoint < nextTargetPoint;
-                    const entryMethod = tierSettings.entryMethod || 'point_earned';
+                    const entryMethod = tierSettings.entryMethod || JoyLoyaltyStatus.ENTRY_METHOD_POINTS;
 
                     if (isNextRank) {
-                        if (entryMethod === 'money_spent') {
+                        if (entryMethod === JoyLoyaltyStatus.ENTRY_METHOD_MONEY) {
                             progressText = this.i18n('[[WidgetV2]]Spend {{remaining_spend}} to {{next_rank}}', translation, {
                                 remaining_spend: String(this.formatCurrency(pointsNeeded, shop?.currency || 'USD')),
                                 next_rank: String(nextTier.name || '')
                             });
-                        } else if (entryMethod === 'number_of_orders') {
+                        } else if (entryMethod === JoyLoyaltyStatus.ENTRY_METHOD_ORDERS) {
                             const orderText = pointsNeeded === 1
                                 ? this.i18n('order', translation)
                                 : this.i18n('orders', translation);
@@ -925,7 +1004,7 @@
                                 next_rank: String(nextTier.name || '')
                             });
                         } else {
-                            // Default: point_earned
+                            // Default: ENTRY_METHOD_POINTS
                             const pointText = pointsNeeded === 1
                                 ? (settings.pointSingular || 'point')
                                 : (settings.pointPlural || 'points');
@@ -937,11 +1016,11 @@
                         }
                     } else {
                         // Not in next rank range yet
-                        if (entryMethod === 'money_spent') {
+                        if (entryMethod === JoyLoyaltyStatus.ENTRY_METHOD_MONEY) {
                             progressText = this.i18n('[[WidgetV2]]Spend more to unlock {{next_rank}} reward!', translation, {
                                 next_rank: String(nextTier.name || '')
                             });
-                        } else if (entryMethod === 'number_of_orders') {
+                        } else if (entryMethod === JoyLoyaltyStatus.ENTRY_METHOD_ORDERS) {
                             const orderText = this.i18n('orders', translation);
                             progressText = this.i18n('[[WidgetV2]]Place more {{loyalty_orders}} to unlock {{next_rank}} reward!', translation, {
                                 loyalty_orders: String(orderText || 'orders'),
@@ -1330,6 +1409,10 @@
                 }
             }
 
+            // ============================================================================
+            // Event Handlers
+            // ============================================================================
+
             attachTabListeners() {
                 const tabs = this.querySelectorAll('.joy-loyalty-tab');
 
@@ -1409,6 +1492,10 @@
                 const terminology = this.getPointTerminology();
                 return points === 1 ? terminology.singular : terminology.plural;
             }
+
+            // ============================================================================
+            // Pagination Methods
+            // ============================================================================
 
             async handlePaginationChange(direction) {
                 const isTabCoupons = this.currentTab === 'coupons';
