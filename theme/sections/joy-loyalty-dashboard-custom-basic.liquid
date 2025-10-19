@@ -62,656 +62,786 @@
     </div>
 </div>
 
-<script>
-    // Loyalty Status Component - Standalone
-    class JoyLoyaltyStatus extends HTMLElement {
-        constructor() {
-            super();
-            this.currentTab = 'coupons';
-            this.tierData = null;
-            this.customerData = null;
-            this.couponsData = null;
-            this.pointsHistoryData = null;
-            this.customerId = this.dataset.customerId;
-            this.showTierCard = this.dataset.showTierCard === 'true';
-            this.showPoints = this.dataset.showPoints === 'true';
-            this.showProgress = this.dataset.showProgress === 'true';
-            this.showTabs = this.dataset.showTabs === 'true';
-            this.isLoadingCoupons = false;
-            this.isLoadingHistory = false;
-            this.isInitialized = false;
-            this.isInitializing = false;
-            this.joyReadyHandler = null;
-
-            // Pagination state
-            this.couponsPage = 1;
-            this.historyPage = 1;
-            this.couponsParams = { before: '', after: '' };
-            this.historyParams = { before: '', after: '' };
-            this.couponsPageInfo = { hasNext: false, hasPre: false };
-            this.historyPageInfo = { hasNext: false, hasPre: false };
-            this.itemsPerPage = parseInt(this.dataset.itemsPerPage) || 5;
-            this.showPagination = this.dataset.showPagination === 'true';
-        }
-
-        connectedCallback() {
-            console.log('[Joy:LoyaltyStatus] Component connected');
-
-            // Prevent multiple initializations
-            if (this.isInitializing) {
-                console.log('[Joy:LoyaltyStatus] Already initializing, skipping...');
-                return;
-            }
-
-            this.initializeComponent();
-        }
-
-        disconnectedCallback() {
-            console.log('[Joy:LoyaltyStatus] Component disconnected');
-            this.cleanup();
-        }
-
-        cleanup() {
-            // Remove event listener
-            if (this.joyReadyHandler) {
-                window.removeEventListener('joy:ready', this.joyReadyHandler);
+{% raw %}
+    <script>
+        // Loyalty Status Component - Standalone
+        class JoyLoyaltyStatus extends HTMLElement {
+            constructor() {
+                super();
+                this.currentTab = 'coupons';
+                this.tierData = null;
+                this.customerData = null;
+                this.couponsData = null;
+                this.pointsHistoryData = null;
+                this.customerId = this.dataset.customerId;
+                this.showTierCard = this.dataset.showTierCard === 'true';
+                this.showPoints = this.dataset.showPoints === 'true';
+                this.showProgress = this.dataset.showProgress === 'true';
+                this.showTabs = this.dataset.showTabs === 'true';
+                this.isLoadingCoupons = false;
+                this.isLoadingHistory = false;
+                this.isInitialized = false;
+                this.isInitializing = false;
                 this.joyReadyHandler = null;
-            }
-        }
 
-        initializeComponent() {
-            // Create bound handler for event listener
-            this.joyReadyHandler = () => this.onJoyReady();
-
-            // Listen for Joy SDK ready event
-            window.addEventListener('joy:ready', this.joyReadyHandler);
-
-            // Try immediate initialization if SDK already loaded
-            if (window.joyInstance) {
-                this.onJoyReady();
-            }
-        }
-
-        async onJoyReady() {
-            // Prevent duplicate initialization
-            if (this.isInitializing || this.isInitialized) {
-                console.log('[Joy:LoyaltyStatus] Already initialized, skipping...');
-                return;
+                // Pagination state
+                this.couponsPage = 1;
+                this.historyPage = 1;
+                this.couponsParams = { before: '', after: '' };
+                this.historyParams = { before: '', after: '' };
+                this.couponsPageInfo = { hasNext: false, hasPre: false };
+                this.historyPageInfo = { hasNext: false, hasPre: false };
+                this.itemsPerPage = parseInt(this.dataset.itemsPerPage) || 5;
+                this.showPagination = this.dataset.showPagination === 'true';
             }
 
-            this.isInitializing = true;
-
-            try {
-                const joyInstance = window.joyInstance;
-
-                if (!joyInstance) {
-                    console.error('[Joy:LoyaltyStatus] Joy SDK not available');
-                    this.renderErrorState('Joy SDK not loaded');
-                    this.isInitializing = false;
+            connectedCallback() {
+                // Prevent multiple initializations
+                if (this.isInitializing) {
                     return;
                 }
 
-                // Remove event listener after first successful initialization
+                this.initializeComponent();
+            }
+
+            disconnectedCallback() {
+                this.cleanup();
+            }
+
+            cleanup() {
+                // Remove event listener
                 if (this.joyReadyHandler) {
                     window.removeEventListener('joy:ready', this.joyReadyHandler);
                     this.joyReadyHandler = null;
                 }
+            }
 
-                // Load customer data
-                this.customerData = await this.loadCustomerData(joyInstance);
+            initializeComponent() {
+                // Create bound handler for event listener
+                this.joyReadyHandler = () => this.onJoyReady();
 
-                // Check if customer is logged in
-                if (!this.customerId || !this.customerData) {
-                    this.renderGuestState();
+                // Listen for Joy SDK ready event
+                window.addEventListener('joy:ready', this.joyReadyHandler);
+
+                // Try immediate initialization if SDK already loaded
+                if (window.joyInstance) {
+                    this.onJoyReady();
+                }
+            }
+
+            async onJoyReady() {
+                // Prevent duplicate initialization
+                if (this.isInitializing || this.isInitialized) {
+                    return;
+                }
+
+                this.isInitializing = true;
+
+                try {
+                    const joyInstance = window.joyInstance;
+
+                    if (!joyInstance) {
+                        console.error('[Joy:LoyaltyStatus] Joy SDK not available');
+                        this.renderErrorState('Joy SDK not loaded');
+                        this.isInitializing = false;
+                        return;
+                    }
+
+                    // Remove event listener after first successful initialization
+                    if (this.joyReadyHandler) {
+                        window.removeEventListener('joy:ready', this.joyReadyHandler);
+                        this.joyReadyHandler = null;
+                    }
+
+                    // Load customer data
+                    this.customerData = await this.loadCustomerData(joyInstance);
+
+                    // Check if customer is logged in
+                    if (!this.customerId || !this.customerData) {
+                        this.renderGuestState();
+                        this.isInitialized = true;
+                        this.isInitializing = false;
+                        return;
+                    }
+
+                    // Load tier information
+                    await this.loadTierData(joyInstance);
+
+                    // Load coupons data
+                    await this.loadCoupons(joyInstance);
+
+                    // Load points history data
+                    await this.loadPointsHistory(joyInstance);
+
+                    // Render the component
+                    this.renderLoyaltyStatus();
+
                     this.isInitialized = true;
                     this.isInitializing = false;
-                    return;
+                } catch (error) {
+                    console.error('[Joy:LoyaltyStatus] Failed to load loyalty status', error);
+                    this.renderErrorState('Unable to load loyalty information');
+                    this.isInitializing = false;
                 }
-
-                // Load tier information
-                await this.loadTierData(joyInstance);
-
-                // Load coupons data
-                await this.loadCoupons(joyInstance);
-
-                // Load points history data
-                await this.loadPointsHistory(joyInstance);
-
-                // Render the component
-                this.renderLoyaltyStatus();
-
-                this.isInitialized = true;
-                this.isInitializing = false;
-            } catch (error) {
-                console.error('[Joy:LoyaltyStatus] Failed to load loyalty status', error);
-                this.renderErrorState('Unable to load loyalty information');
-                this.isInitializing = false;
-            }
-        }
-
-        async loadCustomerData(joyInstance) {
-            if (!this.customerId) {
-                console.log('[Joy:LoyaltyStatus] No customer ID provided');
-                return null;
             }
 
-            try {
-                if (typeof joyInstance.customer === 'function') {
-                    const customerData = await joyInstance.customer();
-                    console.log('[Joy:LoyaltyStatus] Customer data loaded', customerData);
-                    return customerData;
-                } else {
-                    console.warn('[Joy:LoyaltyStatus] Joy SDK customer method not available');
+            async loadCustomerData(joyInstance) {
+                if (!this.customerId) {
                     return null;
                 }
-            } catch (error) {
-                console.error('[Joy:LoyaltyStatus] Failed to load customer data', error);
-                return null;
-            }
-        }
 
-        async loadTierData(joyInstance) {
-            try {
-                // Get all tiers
-                const allTiers = await joyInstance.tiers();
-
-                if (!allTiers || !Array.isArray(allTiers)) {
-                    console.warn('[Joy:LoyaltyStatus] No tiers data available');
-                    return;
+                try {
+                    if (typeof joyInstance.customer === 'function') {
+                        return await joyInstance.customer();
+                    }
+                    return null;
+                } catch (error) {
+                    console.error('[Joy:LoyaltyStatus] Failed to load customer data', error);
+                    return null;
                 }
-
-                // Filter active tiers and sort by targetPoint
-                const activeTiers = allTiers
-                    .filter(tier => !tier.inactive)
-                    .sort((a, b) => (a.targetPoint || 0) - (b.targetPoint || 0));
-
-                // Get customer's current tier ID (match getCurrentTier logic from pointsHelper.js)
-                const customerTierId = this.customerData?.tierId || window.AVADA_JOY?.customer?.tierId;
-
-                console.log('[Joy:LoyaltyStatus] Customer tier ID:', customerTierId);
-
-                // Find current tier by ID (not name)
-                const currentTierIndex = customerTierId
-                    ? Math.max(activeTiers.findIndex(tier => tier.id === customerTierId), 0)
-                    : 0;
-
-                const currentTier = activeTiers[currentTierIndex] || activeTiers[0];
-
-                // Find next tier
-                const nextTier = currentTierIndex < activeTiers.length - 1
-                    ? activeTiers[currentTierIndex + 1]
-                    : null;
-
-                this.tierData = {
-                    current: currentTier,
-                    next: nextTier,
-                    all: activeTiers
-                };
-
-                console.log('[Joy:LoyaltyStatus] Tier data loaded', {
-                    currentTier: currentTier?.name,
-                    nextTier: nextTier?.name,
-                    customerTierId,
-                    currentTierIndex
-                });
-            } catch (error) {
-                console.error('[Joy:LoyaltyStatus] Failed to load tier data', error);
             }
-        }
 
-        async loadCoupons(joyInstance, params = null) {
-            try {
-                this.isLoadingCoupons = true;
+            async loadTierData(joyInstance) {
+                try {
+                    // Get all tiers
+                    const allTiers = await joyInstance.tiers();
 
-                // Use Joy SDK rewardList method to get available coupons
-                if (typeof joyInstance.rewardList === 'function') {
-                    const requestParams = params || this.couponsParams;
-                    const response = await joyInstance.rewardList({
-                        limit: this.itemsPerPage,
-                        isAvailableCoupon: true,
-                        ...requestParams
-                    });
-
-                    // Extract coupons from response (handle different response structures)
-                    let coupons = response?.coupons || response?.data?.coupons || response?.data || [];
-
-                    // Debug: Log first coupon to see structure
-                    if (coupons.length > 0) {
-                        console.log('[Joy:LoyaltyStatus] Sample coupon structure:', {
-                            couponCode: coupons[0].couponCode,
-                            discountValue: coupons[0].discountValue,
-                            rewardValue: coupons[0].rewardValue,
-                            programDescription: coupons[0].programDescription,
-                            rewardTitle: coupons[0].rewardTitle,
-                            expiredAt: coupons[0].expiredAt,
-                            status: coupons[0].status,
-                            program: coupons[0].program ? {
-                                event: coupons[0].program.event,
-                                earnAmount: coupons[0].program.earnAmount
-                            } : null,
-                            fullObject: coupons[0]
-                        });
+                    if (!allTiers || !Array.isArray(allTiers)) {
+                        console.warn('[Joy:LoyaltyStatus] No tiers data available');
+                        return;
                     }
 
-                    // Sort coupons: active status first (not used/redeemed)
-                    this.couponsData = coupons.sort((a, b) => {
-                        const statusA = a.status || a.state || 'active';
-                        const statusB = b.status || b.state || 'active';
-                        const isUsedA = statusA === 'used' || statusA === 'redeemed' || a.isUsed || a.is_used;
-                        const isUsedB = statusB === 'used' || statusB === 'redeemed' || b.isUsed || b.is_used;
+                    // Filter active tiers and sort by targetPoint
+                    const activeTiers = allTiers
+                        .filter(tier => !tier.inactive)
+                        .sort((a, b) => (a.targetPoint || 0) - (b.targetPoint || 0));
 
-                        // Active (not used) rewards first
-                        return (isUsedA ? 1 : -1) - (isUsedB ? 1 : -1);
-                    });
+                    // Get customer's current tier ID (match getCurrentTier logic from pointsHelper.js)
+                    const customerTierId = this.customerData?.tierId || window.AVADA_JOY?.customer?.tierId;
 
-                    // Extract page info
-                    this.couponsPageInfo = {
-                        hasNext: response?.pageInfo?.hasNext || false,
-                        hasPre: response?.pageInfo?.hasPre || false
+                    // Find current tier by ID (not name)
+                    const currentTierIndex = customerTierId
+                        ? Math.max(activeTiers.findIndex(tier => tier.id === customerTierId), 0)
+                        : 0;
+
+                    const currentTier = activeTiers[currentTierIndex] || activeTiers[0];
+
+                    // Find next tier
+                    const nextTier = currentTierIndex < activeTiers.length - 1
+                        ? activeTiers[currentTierIndex + 1]
+                        : null;
+
+                    this.tierData = {
+                        current: currentTier,
+                        next: nextTier,
+                        all: activeTiers
                     };
+                } catch (error) {
+                    console.error('[Joy:LoyaltyStatus] Failed to load tier data', error);
+                }
+            }
 
-                    console.log('[Joy:LoyaltyStatus] Coupons data loaded', this.couponsData);
-                    console.log('[Joy:LoyaltyStatus] Coupons page info', this.couponsPageInfo);
-                } else {
-                    console.warn('[Joy:LoyaltyStatus] Joy SDK rewardList method not available');
+            async loadCoupons(joyInstance, params = null) {
+                try {
+                    this.isLoadingCoupons = true;
+
+                    // Use Joy SDK rewardList method to get available coupons
+                    if (typeof joyInstance.rewardList === 'function') {
+                        const requestParams = params || this.couponsParams;
+                        const response = await joyInstance.rewardList({
+                            limit: this.itemsPerPage,
+                            isAvailableCoupon: true,
+                            ...requestParams
+                        });
+
+                        // Extract coupons from response (handle different response structures)
+                        let coupons = response?.coupons || response?.data?.coupons || response?.data || [];
+
+                        // Sort coupons: active status first (not used/redeemed)
+                        this.couponsData = coupons.sort((a, b) => {
+                            const statusA = a.status || a.state || 'active';
+                            const statusB = b.status || b.state || 'active';
+                            const isUsedA = statusA === 'used' || statusA === 'redeemed' || a.isUsed || a.is_used;
+                            const isUsedB = statusB === 'used' || statusB === 'redeemed' || b.isUsed || b.is_used;
+
+                            // Active (not used) rewards first
+                            return (isUsedA ? 1 : -1) - (isUsedB ? 1 : -1);
+                        });
+
+                        // Extract page info
+                        this.couponsPageInfo = {
+                            hasNext: response?.pageInfo?.hasNext || false,
+                            hasPre: response?.pageInfo?.hasPre || false
+                        };
+                    } else {
+                        this.couponsData = [];
+                        this.couponsPageInfo = { hasNext: false, hasPre: false };
+                    }
+
+                    this.isLoadingCoupons = false;
+                } catch (error) {
+                    console.error('[Joy:LoyaltyStatus] Failed to load coupons', error);
                     this.couponsData = [];
                     this.couponsPageInfo = { hasNext: false, hasPre: false };
+                    this.isLoadingCoupons = false;
                 }
-
-                this.isLoadingCoupons = false;
-            } catch (error) {
-                console.error('[Joy:LoyaltyStatus] Failed to load coupons', error);
-                this.couponsData = [];
-                this.couponsPageInfo = { hasNext: false, hasPre: false };
-                this.isLoadingCoupons = false;
             }
-        }
 
-        async loadPointsHistory(joyInstance, params = null) {
-            try {
-                this.isLoadingHistory = true;
+            async loadPointsHistory(joyInstance, params = null) {
+                try {
+                    this.isLoadingHistory = true;
 
-                // Use Joy SDK customerHistory method to get points history
-                if (typeof joyInstance.customerHistory === 'function') {
-                    const requestParams = params || this.historyParams;
-                    const response = await joyInstance.customerHistory({
-                        limit: this.itemsPerPage,
-                        ...requestParams
-                    });
-
-                    console.log('[Joy:LoyaltyStatus] Points history response:', response);
-
-                    // Extract activities from response (handle different response structures)
-                    this.pointsHistoryData = response?.data || response?.activities || response?.history || response || [];
-
-                    // Debug: Log first history item to see structure
-                    if (this.pointsHistoryData.length > 0) {
-                        console.log('[Joy:LoyaltyStatus] Sample history item structure:', {
-                            content: this.pointsHistoryData[0].content,
-                            newPoint: this.pointsHistoryData[0].newPoint,
-                            oldPoint: this.pointsHistoryData[0].oldPoint,
-                            titleActivity: this.pointsHistoryData[0].titleActivity,
-                            type: this.pointsHistoryData[0].type,
-                            source: this.pointsHistoryData[0].source,
-                            programTitle: this.pointsHistoryData[0].programTitle,
-                            couponCode: this.pointsHistoryData[0].couponCode,
-                            createdAt: this.pointsHistoryData[0].createdAt,
-                            description: this.pointsHistoryData[0].description,
-                            rewardTitle: this.pointsHistoryData[0].rewardTitle,
-                            userNote: this.pointsHistoryData[0].userNote,
-                            fullObject: this.pointsHistoryData[0]
+                    // Use Joy SDK customerHistory method to get points history
+                    if (typeof joyInstance.customerHistory === 'function') {
+                        const requestParams = params || this.historyParams;
+                        const response = await joyInstance.customerHistory({
+                            limit: this.itemsPerPage,
+                            ...requestParams
                         });
+
+                        // Extract activities from response (handle different response structures)
+                        this.pointsHistoryData = response?.data || response?.activities || response?.history || response || [];
+
+                        // Extract page info
+                        this.historyPageInfo = {
+                            hasNext: response?.pageInfo?.hasNext || false,
+                            hasPre: response?.pageInfo?.hasPre || false
+                        };
+                    } else {
+                        this.pointsHistoryData = [];
+                        this.historyPageInfo = { hasNext: false, hasPre: false };
                     }
 
-                    // Extract page info
-                    this.historyPageInfo = {
-                        hasNext: response?.pageInfo?.hasNext || false,
-                        hasPre: response?.pageInfo?.hasPre || false
-                    };
-
-                    console.log('[Joy:LoyaltyStatus] Points history data loaded', this.pointsHistoryData);
-                    console.log('[Joy:LoyaltyStatus] Points history page info', this.historyPageInfo);
-                } else {
-                    console.warn('[Joy:LoyaltyStatus] Joy SDK customerHistory method not available');
+                    this.isLoadingHistory = false;
+                } catch (error) {
+                    console.error('[Joy:LoyaltyStatus] Failed to load points history', error);
                     this.pointsHistoryData = [];
                     this.historyPageInfo = { hasNext: false, hasPre: false };
-                }
-
-                this.isLoadingHistory = false;
-            } catch (error) {
-                console.error('[Joy:LoyaltyStatus] Failed to load points history', error);
-                this.pointsHistoryData = [];
-                this.historyPageInfo = { hasNext: false, hasPre: false };
-                this.isLoadingHistory = false;
-            }
-        }
-
-        getCustomerPoints() {
-            try {
-                // Try customer data first
-                if (this.customerData && this.customerData.point) {
-                    return parseInt(this.customerData.point) || 0;
-                }
-
-                // Try global Joy data
-                if (window.AVADA_JOY?.points) {
-                    return parseInt(window.AVADA_JOY.points) || 0;
-                }
-
-                // Try Joy instance customer data
-                if (window.joyInstance?.customer?.point) {
-                    return parseInt(window.joyInstance.customer.point) || 0;
-                }
-
-                return 0;
-            } catch (error) {
-                console.error('[Joy:LoyaltyStatus] Failed to get customer points', error);
-                return 0;
-            }
-        }
-
-        getPointTerminology() {
-            return {
-                singular: window.AVADA_JOY?.settings?.pointSingular || 'point',
-                plural: window.AVADA_JOY?.settings?.pointPlural || 'points'
-            };
-        }
-
-        /**
-         * Check if voucher is applicable - replicates isVoucherApplicable logic
-         * @param {Object} cartInfo - Cart information
-         * @param {Object} voucher - Voucher/coupon object
-         * @returns {Object} {applicable: boolean, reason: string}
-         */
-        isVoucherApplicable(cartInfo, voucher) {
-            if (voucher.isUsedCode) return {applicable: false, reason: 'VOUCHER_ALREADY_USED'};
-
-            // Check status - API might return 'status' or 'discountStatus' field
-            const couponStatus = voucher.discountStatus || voucher.status;
-            if (couponStatus && couponStatus !== 'active') {
-                return {applicable: false, reason: 'VOUCHER_INACTIVE'};
-            }
-
-            const program = voucher.program || {};
-            if (program.event === 'free_gift') return {applicable: true, reason: ''};
-
-            if (!cartInfo || !cartInfo.items || !cartInfo.items.length) {
-                return {applicable: false, reason: 'CART_EMPTY'};
-            }
-
-            const orderReq = program.orderReq || 'NONE';
-
-            // Check minimum order amount
-            if (orderReq === 'MIN_AMOUNT') {
-                const minOrderAmount = program.orderReqAmount || 0;
-                const totalPrice = cartInfo.total_price || 0;
-                if (minOrderAmount && totalPrice < minOrderAmount) {
-                    return {applicable: false, reason: 'ORDER_BELOW_MINIMUM'};
+                    this.isLoadingHistory = false;
                 }
             }
 
-            // Check minimum quantity
-            if (orderReq === 'MIN_QUANTITY') {
-                const minOrderQuantity = program.orderReqQuantity || 0;
-                const itemCount = cartInfo.item_count || 0;
-                if (minOrderQuantity && itemCount < minOrderQuantity) {
-                    return {applicable: false, reason: 'ITEM_QUANTITY_BELOW_MINIMUM'};
+            getCustomerPoints() {
+                try {
+                    // Try customer data first
+                    if (this.customerData && this.customerData.point) {
+                        return parseInt(this.customerData.point) || 0;
+                    }
+
+                    // Try global Joy data
+                    if (window.AVADA_JOY?.points) {
+                        return parseInt(window.AVADA_JOY.points) || 0;
+                    }
+
+                    // Try Joy instance customer data
+                    if (window.joyInstance?.customer?.point) {
+                        return parseInt(window.joyInstance.customer.point) || 0;
+                    }
+
+                    return 0;
+                } catch (error) {
+                    console.error('[Joy:LoyaltyStatus] Failed to get customer points', error);
+                    return 0;
                 }
             }
 
-            return {applicable: true, reason: ''};
-        }
-
-        /**
-         * Get human-readable message for voucher not applicable reason
-         * @param {string} reason - Reason code
-         * @returns {string} Translated message
-         */
-        getVoucherReasonMessage(reason) {
-            const translation = window.AVADA_JOY?.primaryTranslation || {};
-
-            switch (reason) {
-                case 'VOUCHER_ALREADY_USED':
-                    return 'This coupon has already been used';
-                case 'VOUCHER_INACTIVE':
-                    return 'This coupon is no longer active';
-                case 'CART_EMPTY':
-                    return 'Please add items to your cart first';
-                case 'ORDER_BELOW_MINIMUM':
-                    return 'Cart total does not meet minimum requirement';
-                case 'ITEM_QUANTITY_BELOW_MINIMUM':
-                    return 'Cart does not have enough items';
-                default:
-                    return 'This coupon cannot be applied';
+            getPointTerminology() {
+                return {
+                    singular: window.AVADA_JOY?.settings?.pointSingular || 'point',
+                    plural: window.AVADA_JOY?.settings?.pointPlural || 'points'
+                };
             }
-        }
 
-        /**
-         * Format discount value for a coupon - replicates prepareDiscountValue logic
-         * @param {Object} coupon - Coupon object from API
-         * @returns {string} Formatted discount value
-         */
-        formatDiscountValue(coupon) {
-            const shop = window.AVADA_JOY?.shop || {};
-            const settings = window.AVADA_JOY?.settings || {};
-            const translation = window.AVADA_JOY?.primaryTranslation || {};
-            const program = coupon.program || {};
-            const {event, earnAmount, redeemType, spendPoint, specificProducts = [], variantId, freeProductQuantity} = program;
-            const redeemPoint = coupon.redeemPoint || 0;
+            /**
+             * Check if voucher is applicable - replicates isVoucherApplicable logic
+             * @param {Object} cartInfo - Cart information
+             * @param {Object} voucher - Voucher/coupon object
+             * @returns {Object} {applicable: boolean, reason: string}
+             */
+            isVoucherApplicable(cartInfo, voucher) {
+                if (voucher.isUsedCode) return {applicable: false, reason: 'VOUCHER_ALREADY_USED'};
 
-            // Handle different event types based on prepareDiscountValue.js
-            switch (event) {
-                case 'free_shipping':
-                    return translation['Free shipping'] || 'Free shipping';
+                // Check status - API might return 'status' or 'discountStatus' field
+                const couponStatus = voucher.discountStatus || voucher.status;
+                if (couponStatus && couponStatus !== 'active') {
+                    return {applicable: false, reason: 'VOUCHER_INACTIVE'};
+                }
 
-                case 'free_gift':
-                    if (freeProductQuantity === 1 && specificProducts.length > 0) {
-                        const product = specificProducts.find(p => {
-                            const variantIds = (p.variants || []).map(v => v.id);
-                            return variantIds.includes(variantId);
-                        });
-                        if (product) {
-                            return `Free gift: ${product.title}`;
+                const program = voucher.program || {};
+                if (program.event === 'free_gift') return {applicable: true, reason: ''};
+
+                if (!cartInfo || !cartInfo.items || !cartInfo.items.length) {
+                    return {applicable: false, reason: 'CART_EMPTY'};
+                }
+
+                const orderReq = program.orderReq || 'NONE';
+
+                // Check minimum order amount
+                if (orderReq === 'MIN_AMOUNT') {
+                    const minOrderAmount = program.orderReqAmount || 0;
+                    const totalPrice = cartInfo.total_price || 0;
+                    if (minOrderAmount && totalPrice < minOrderAmount) {
+                        return {applicable: false, reason: 'ORDER_BELOW_MINIMUM'};
+                    }
+                }
+
+                // Check minimum quantity
+                if (orderReq === 'MIN_QUANTITY') {
+                    const minOrderQuantity = program.orderReqQuantity || 0;
+                    const itemCount = cartInfo.item_count || 0;
+                    if (minOrderQuantity && itemCount < minOrderQuantity) {
+                        return {applicable: false, reason: 'ITEM_QUANTITY_BELOW_MINIMUM'};
+                    }
+                }
+
+                return {applicable: true, reason: ''};
+            }
+
+            /**
+             * Get human-readable message for voucher not applicable reason
+             */
+            getVoucherReasonMessage(reason) {
+                const translation = window.AVADA_JOY?.primaryTranslation || {};
+                const messages = {
+                    'VOUCHER_ALREADY_USED': this.i18n('This coupon has already been used', translation),
+                    'VOUCHER_INACTIVE': this.i18n('This coupon is no longer active', translation),
+                    'CART_EMPTY': this.i18n('Please add items to your cart first', translation),
+                    'ORDER_BELOW_MINIMUM': this.i18n('Cart total does not meet minimum requirement', translation),
+                    'ITEM_QUANTITY_BELOW_MINIMUM': this.i18n('Cart does not have enough items', translation)
+                };
+                return messages[reason] || this.i18n('This coupon cannot be applied', translation);
+            }
+
+            /**
+             * Format discount value for a coupon - replicates prepareDiscountValue logic
+             */
+            formatDiscountValue(coupon) {
+                const translation = window.AVADA_JOY?.primaryTranslation || {};
+                const shop = window.AVADA_JOY?.shop || {};
+                const settings = window.AVADA_JOY?.settings || {};
+                const program = coupon.program || {};
+                const {
+                    event,
+                    earnAmount,
+                    redeemType,
+                    spendPoint,
+                    specificProducts = [],
+                    variantId,
+                    freeProductQuantity,
+                    action,
+                    appliedToGets,
+                    specificProductsGets = [],
+                    specificCollectionsGets = [],
+                    discountedType,
+                    discountedValue
+                } = program;
+                const redeemPoint = coupon.redeemPoint || 0;
+                const referralCustomerEmail = coupon.referralCustomerEmail;
+                const currency = shop?.currency || 'USD';
+
+                // Handle different event types based on prepareDiscountValue.js
+                switch (event) {
+                    case 'free_shipping':
+                        return this.i18n('Free shipping', translation);
+
+                    case 'free_gift':
+                        if (freeProductQuantity === 1 && specificProducts.length > 0) {
+                            const product = specificProducts.find(p => {
+                                const variantIds = (p.variants || []).map(v => v.id);
+                                return variantIds.includes(variantId);
+                            });
+                            if (product) {
+                                return this.i18n('Free gift: {{product_name}}', translation, {
+                                    product_name: product.title
+                                });
+                            }
                         }
-                    }
-                    const productNames = specificProducts.map(p => p.title).join(', ');
-                    return productNames ? `Free gift: ${productNames}` : 'Free gift';
+                        const productNames = specificProducts.map(p => p.title).join(', ');
+                        if (productNames) {
+                            return this.i18n('Free gift: {{product_name}}', translation, {
+                                product_name: productNames
+                            });
+                        }
+                        return this.i18n('Free gift', translation);
 
-                case 'amount_discount':
-                    if (redeemType !== 'dynamic') {
-                        return `Discount $${earnAmount} off`;
-                    }
-                    const dynamicAmount = Math.floor(Math.floor(redeemPoint / spendPoint) * parseInt(earnAmount));
-                    return `Discount $${dynamicAmount} off`;
+                    case 'buy_x_get_y':
+                        const listNameShow = [];
+                        const isApplyToProduct = appliedToGets === 'specific_product';
 
-                case 'percentage_discount':
-                    return `Discount ${earnAmount}% off`;
+                        if (!isApplyToProduct) {
+                            const listCollectionName = specificCollectionsGets.map(c => c.title);
+                            listNameShow.push(...listCollectionName);
+                        }
+                        if (isApplyToProduct) {
+                            const listProductName = specificProductsGets.map(p => p.title);
+                            listNameShow.push(...listProductName);
+                        }
 
-                default:
-                    // Fallback
-                    if (earnAmount) {
-                        return `Discount $${earnAmount} off`;
-                    }
-                    return '-';
+                        const isSingular = listNameShow.length === 1;
+                        const translateUnit = this.i18n(
+                            isApplyToProduct
+                                ? (isSingular ? 'product' : 'products')
+                                : (isSingular ? 'collection' : 'collections'),
+                            translation
+                        );
+
+                        const discountValueTranslate = () => {
+                            if (discountedType === 'customer_gets_percentage') {
+                                return discountedValue + '%';
+                            }
+                            return this.formatCurrency(parseInt(discountedValue), currency);
+                        };
+
+                        if (['customer_gets_percentage', 'customer_gets_amount'].includes(discountedType)) {
+                            return `${discountValueTranslate()} ${this.i18n('off', translation)} ${listNameShow.length} ${translateUnit}: ${listNameShow.join(', ')}`;
+                        }
+
+                        return `${this.i18n('Free', translation)} ${listNameShow.length} ${translateUnit}: ${listNameShow.join(', ')}`;
+
+                    case 'amount_discount':
+                        if (redeemType !== 'dynamic') {
+                            return this.i18n('Discount {{discount_value}} off', translation, {
+                                discount_value: this.formatCurrency(parseInt(earnAmount), currency)
+                            });
+                        }
+                        const dynamicAmount = Math.floor(Math.floor(redeemPoint / spendPoint) * parseInt(earnAmount));
+                        return this.i18n('Discount {{discount_value}} off', translation, {
+                            discount_value: this.formatCurrency(dynamicAmount, currency)
+                        });
+
+                    case 'percentage_discount':
+                        return this.i18n('Discount {{discount_value}} off', translation, {
+                            discount_value: earnAmount + '%'
+                        });
+
+                    case 'referral_friend':
+                        const fieldEarnValue = !referralCustomerEmail
+                            ? 'customerRewardEarnAmount'
+                            : 'friendRewardEarnAmount';
+                        const fieldEarnType = !referralCustomerEmail
+                            ? 'customerRewardDiscountType'
+                            : 'friendRewardDiscountType';
+
+                        const discountValue = program[fieldEarnType] === 'earn_discount_percentage'
+                            ? program[fieldEarnValue] + '%'
+                            : this.formatCurrency(program[fieldEarnValue], currency);
+
+                        return this.i18n('Discount {{discount_value}} off', translation, {
+                            discount_value: discountValue
+                        });
+
+                    case 'milestone':
+                        if (action === 'discount_amount') {
+                            return this.i18n('Discount {{discount_value}} off', translation, {
+                                discount_value: this.formatCurrency(parseInt(earnAmount), currency)
+                            });
+                        }
+                        if (action === 'discount_percentage') {
+                            return this.i18n('Discount {{discount_value}} off', translation, {
+                                discount_value: earnAmount + '%'
+                            });
+                        }
+                        return '-';
+
+                    default:
+                        return '-';
+                }
             }
-        }
 
-        /**
-         * Format discount program text for a coupon - replicates prepareDiscountProgramText logic
-         * @param {Object} coupon - Coupon object from API
-         * @returns {string} Formatted program description
-         */
-        formatDiscountProgramText(coupon) {
-            const program = coupon.program || {};
-            const {event, type, title} = program;
-            const translation = window.AVADA_JOY?.primaryTranslation || {};
+            /**
+             * Format currency value - replicates displayMoneyValue from @avada/functions
+             */
+            formatCurrency(amount, currency) {
+                const settings = window.AVADA_JOY?.settings || {};
+                const shop = window.AVADA_JOY?.shop || {};
 
-            // For free shipping, always return the title or "Free Shipping"
-            if (event === 'free_shipping') {
-                return title || translation['Free Shipping'] || 'Free Shipping';
+                // Get currency symbol
+                const currencySymbols = {
+                    'USD': '$',
+                    'EUR': '€',
+                    'GBP': '£',
+                    'CAD': 'CA$',
+                    'AUD': 'A$',
+                    'JPY': '¥',
+                    'CNY': '¥'
+                };
+                const symbol = currencySymbols[currency] || shop?.currencySymbol || currency;
+
+                // Format number with locale
+                const locale = (typeof window !== 'undefined' && window.navigator?.language) || 'en-US';
+                const isDecimal = amount % 1 !== 0;
+                const formatter = new Intl.NumberFormat(locale, {
+                    style: 'decimal',
+                    minimumFractionDigits: isDecimal ? 2 : 0,
+                    maximumFractionDigits: isDecimal ? 2 : 0
+                });
+                const formattedAmount = formatter.format(amount);
+
+                // Apply currency position from settings
+                const isAfter = settings.currencyPosition === 'after';
+                const spacing = settings.currencySymbolSpacing ? ' ' : '';
+
+                if (isAfter) {
+                    return formattedAmount + spacing + symbol;
+                } else {
+                    return symbol + spacing + formattedAmount;
+                }
             }
 
-            // Referral program
-            if (type === 'referral') {
-                return translation['Referral program'] || title || 'Referral program';
+            /**
+             * Format discount program text for a coupon - replicates prepareDiscountProgramText logic
+             */
+            formatDiscountProgramText(coupon) {
+                const translation = window.AVADA_JOY?.primaryTranslation || {};
+                const program = coupon.program || {};
+                const {event, type, title} = program;
+
+                // Check for tier programs
+                if (type === 'tier_spending' || type === 'tier_privileges') {
+                    return title || '';
+                }
+
+                // Referral program
+                if (type === 'referral') {
+                    return this.i18n('Referral program', translation) || title || '';
+                }
+
+                // For amount and percentage discounts, use programDescription
+                // This matches prepareDiscountProgramText which calls prepareDescription
+                if (event === 'amount_discount' || event === 'percentage_discount') {
+                    return coupon.programDescription || title || '';
+                }
+
+                // For free shipping
+                if (event === 'free_shipping') {
+                    return title || this.i18n('Free Shipping', translation);
+                }
+
+                // Default: return title
+                return title || '';
             }
 
-            // For amount and percentage discounts, use programDescription if available
-            if (event === 'amount_discount' || event === 'percentage_discount') {
-                return coupon.programDescription || title || '';
+            /**
+             * Format activity content for points history - replicates prepareMuiContent logic
+             */
+            formatActivityContent(activity) {
+                const translation = window.AVADA_JOY?.primaryTranslation || {};
+                const settings = window.AVADA_JOY?.settings || {};
+                const {
+                    type,
+                    event,
+                    source,
+                    userNote,
+                    orderNumber: order_number,
+                    couponCode,
+                    programTitle,
+                    reviewId: review_id,
+                    reason
+                } = activity;
+
+                const pointPlural = settings.pointPlural || 'points';
+
+                // Helper to return action with optional description
+                const result = (action, description = null) => ({ action, description });
+
+                // Match prepareMuiContent.js logic
+                switch (type) {
+                    case 'adjust_point':
+                        if (event === 'reset_point') {
+                            return result(this.i18n('Reset {{points}} by import', translation, { points: pointPlural }));
+                        }
+                        if (event === 'add_point') {
+                            return result(this.i18n('Add {{points}} by import', translation, { points: pointPlural }));
+                        }
+                        return result(userNote || this.i18n('Admin adjusted points', translation));
+
+                    case 'remove_point':
+                        if (event === 'cancelOrder') {
+                            return result(this.i18n('Removed {{points}} from canceled order #{{order_number}}', translation, {
+                                points: pointPlural,
+                                order_number
+                            }));
+                        }
+                        if (event === 'refundOrder') {
+                            return result(this.i18n('Removed {{points}} from refunded order #{{order_number}}', translation, {
+                                points: pointPlural,
+                                order_number
+                            }));
+                        }
+                        if (event === 'refundPartiallyOrder') {
+                            return result(this.i18n('Removed {{points}} from partially refund order #{{order_number}}', translation, {
+                                points: pointPlural,
+                                order_number
+                            }));
+                        }
+                        return result(this.i18n('Removed {{points}} from {{program}}', translation, {
+                            points: pointPlural,
+                            program: programTitle || 'order'
+                        }));
+
+                    case 'earn_DISCOUNT':
+                        return result(
+                            this.i18n('Received coupon from {{program}} reward', translation, { program: programTitle || 'reward' }),
+                            couponCode ? this.i18n('Coupon Code: {{code}}', translation, { code: couponCode }) : null
+                        );
+
+                    case 'earn_point':
+                        if (event === 'migrate_order') {
+                            return result(userNote || this.i18n('Admin adjusted points', translation));
+                        }
+                        if (event === 'shopify_flow_add_point') {
+                            return result(this.i18n('Received points from {{program}} reward', translation, { program: reason }));
+                        }
+                        if (event === 'migrate_tier') {
+                            return result(userNote || this.i18n('Admin adjusted Tiers spent', translation));
+                        }
+                        // For place_order event, include order number in program name
+                        if (event === 'place_order' && order_number) {
+                            return result(this.i18n('Received points from Place order #{{order_number}} reward', translation, { order_number }));
+                        }
+                        return result(this.i18n('Received points from {{program}} reward', translation, { program: programTitle || 'reward' }));
+
+                    case 'redeem_point':
+                        const user = source === 'user' ? this.i18n('User', translation) : this.i18n('Admin', translation);
+                        if (event === 'admin_approve_disapprove_review') {
+                            return result(this.i18n('Reducted points due to admin disapproving the review #{{review_id}}', translation, { review_id }));
+                        }
+                        return result(
+                            this.i18n('{{user}} redeemed a reward', translation, { user }),
+                            couponCode ? this.i18n('Coupon Code: {{code}}', translation, { code: couponCode }) : null
+                        );
+
+                    case 'expire_point':
+                        return result(this.i18n('Expired {{points}}', translation, { points: pointPlural }));
+
+                    case 'rewards_tier_up':
+                        return result(
+                            this.i18n('Received a coupon from {{tier}} reward', translation, { tier: activity.upgradeTierName || 'tier' }),
+                            couponCode ? this.i18n('Coupon Code: {{code}}', translation, { code: couponCode }) : null
+                        );
+
+                    case 'bonus_point':
+                        return result(this.i18n('Received points from Milestone reward', translation));
+
+                    case 'refund_point':
+                        if (event === 'cancelOrder') {
+                            return result(this.i18n('Received {{points}} from canceled order #{{order_number}}', translation, {
+                                points: pointPlural,
+                                order_number
+                            }));
+                        }
+                        if (event === 'refundOrder') {
+                            return result(this.i18n('Received {{points}} from refunded order #{{order_number}}', translation, {
+                                points: pointPlural,
+                                order_number
+                            }));
+                        }
+                        return result(this.i18n('Received {{points}} from refund', translation, { points: pointPlural }));
+
+                    case 'log_place_order_pending_fulfill':
+                        if (activity.point <= 1) {
+                            return result(this.i18n('Placed order #{{order_number}} and awaits {{total_points}} {{points}} to be rewarded - NOT ELIGIBLE (Order refunded)', translation, {
+                                order_number,
+                                total_points: activity.totalPoint || 0,
+                                points: pointPlural
+                            }));
+                        }
+                        return result(this.i18n('Placed order #{{order_number}} and awaits {{point}} {{points}} to be rewarded', translation, {
+                            order_number,
+                            point: activity.point || 0,
+                            points: pointPlural
+                        }));
+
+                    case 'redeem_coupon_referral':
+                        if (event === 'referrer') {
+                            return result(this.i18n('{{email}} received your referral request', translation, {
+                                email: activity.referredCustomerEmail
+                            }));
+                        }
+                        return result(this.i18n('Referred {{friend}}', translation, {
+                            friend: activity.referredCustomerEmail || 'friend'
+                        }));
+
+                    default:
+                        // Check if content field exists (pre-formatted by backend)
+                        if (activity.content) {
+                            return result(activity.content);
+                        }
+                        return result(programTitle || event || this.i18n('Points Activity', translation));
+                }
             }
 
-            // For other events, prefer programDescription but filter out point-only descriptions
-            if (coupon.programDescription && !coupon.programDescription.match(/^\d+\s*points?$/i)) {
-                return coupon.programDescription;
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
             }
 
-            return title || '';
-        }
+            /**
+             * Translation helper function - replicates i18n from @avada/functions
+             */
+            i18n(key, translation = {}, params = {}) {
+                // Helper to strip [[...]] prefix
+                const stripPrefix = (str) => {
+                    return typeof str === 'string' ? str.replace(/\[\[(.*?)\]\]/g, '') : str;
+                };
 
-        /**
-         * Format activity content for points history - replicates prepareMuiContent logic
-         * @param {Object} activity - Activity object from API
-         * @returns {Object} Object with 'action' and optional 'description' properties
-         */
-        formatActivityContent(activity) {
-            const translation = window.AVADA_JOY?.primaryTranslation || {};
-            const settings = window.AVADA_JOY?.settings || {};
-            const {
-                type,
-                event,
-                source,
-                userNote,
-                orderNumber: order_number,
-                couponCode,
-                programTitle,
-                reviewId: review_id,
-                reason
-            } = activity;
+                // Get initial string: check translation object first, then use stripped key as fallback
+                let text = (translation && translation.hasOwnProperty(key) && translation[key]) || stripPrefix(key);
 
-            const pointPlural = settings.pointPlural || 'points';
+                // If no params, return text as is
+                if (!params || Object.keys(params).length === 0) {
+                    return text || '';
+                }
 
-            // Helper to return action with optional description
-            const result = (action, description = null) => ({ action, description });
+                // If we have params but the text doesn't contain any placeholders,
+                // it means the translation gave us a shortened version - use the original key instead
+                const textHasPlaceholders = /\{\{.*?\}\}/.test(text);
+                const keyHasPlaceholders = /\{\{.*?\}\}/.test(key);
 
-            // Match prepareMuiContent.js logic
-            switch (type) {
-                case 'adjust_point':
-                    if (event === 'reset_point') {
-                        return result(`Reset ${pointPlural} by import`);
-                    }
-                    if (event === 'add_point') {
-                        return result(`Add ${pointPlural} by import`);
-                    }
-                    return result(userNote || 'Admin adjusted points');
+                if (!textHasPlaceholders && keyHasPlaceholders) {
+                    // Original key has placeholders but translated text doesn't - use original key
+                    text = stripPrefix(key);
+                }
 
-                case 'remove_point':
-                    if (event === 'cancelOrder') {
-                        return result(`Removed ${pointPlural} from canceled order #${order_number}`);
+                // Replace placeholders with actual values
+                Object.keys(params).forEach(paramKey => {
+                    const value = params[paramKey];
+                    if (value !== undefined && value !== null) {
+                        // Create regex pattern that matches {{key}} with optional spaces: {{key}} or {{ key }}
+                        const pattern = new RegExp('\\{\\{\\s*' + paramKey + '\\s*\\}\\}', 'g');
+                        text = String(text).replace(pattern, String(value));
                     }
-                    if (event === 'refundOrder') {
-                        return result(`Removed ${pointPlural} from refunded order #${order_number}`);
-                    }
-                    if (event === 'refundPartiallyOrder') {
-                        return result(`Removed ${pointPlural} from partially refund order #${order_number}`);
-                    }
-                    return result(`Removed ${pointPlural} from ${programTitle || 'order'}`);
+                });
 
-                case 'earn_DISCOUNT':
-                    return result(`Received coupon from ${programTitle || 'reward'}`, couponCode ? `Coupon Code: ${couponCode}` : null);
-
-                case 'earn_point':
-                    if (event === 'migrate_order') {
-                        return result(userNote || 'Admin adjusted points');
-                    }
-                    if (event === 'shopify_flow_add_point') {
-                        return result(`Received points from ${reason} reward`);
-                    }
-                    if (event === 'migrate_tier') {
-                        return result(userNote || 'Admin adjusted Tiers spent');
-                    }
-                    // For place_order event, include order number in program name
-                    if (event === 'place_order' && order_number) {
-                        return result(`Received points from Place order #${order_number} reward`);
-                    }
-                    return result(`Received points from ${programTitle || 'reward'}`);
-
-                case 'redeem_point':
-                    const user = source === 'user' ? 'User' : 'Admin';
-                    if (event === 'admin_approve_disapprove_review') {
-                        return result(`Reducted points due to admin disapproving the review #${review_id}`);
-                    }
-                    return result(`${user} redeemed a reward`, couponCode ? `Coupon Code: ${couponCode}` : null);
-
-                case 'expire_point':
-                    return result(`Expired ${pointPlural}`);
-
-                case 'rewards_tier_up':
-                    return result(`Received a coupon from ${activity.upgradeTierName || 'tier'} reward`, couponCode ? `Coupon Code: ${couponCode}` : null);
-
-                case 'bonus_point':
-                    return result(`Received points from Milestone reward`);
-
-                case 'refund_point':
-                    if (event === 'cancelOrder') {
-                        return result(`Received ${pointPlural} from canceled order #${order_number}`);
-                    }
-                    if (event === 'refundOrder') {
-                        return result(`Received ${pointPlural} from refunded order #${order_number}`);
-                    }
-                    return result(`Received ${pointPlural} from refund`);
-
-                case 'log_place_order_pending_fulfill':
-                    if (activity.point <= 1) {
-                        return result(`Placed order #${order_number} and awaits ${activity.totalPoint || 0} ${pointPlural} to be rewarded - NOT ELIGIBLE (Order refunded)`);
-                    }
-                    return result(`Placed order #${order_number} and awaits ${activity.point || 0} ${pointPlural} to be rewarded`);
-
-                case 'redeem_coupon_referral':
-                    if (event === 'referrer') {
-                        return result(`${activity.referredCustomerEmail} received your referral request`);
-                    }
-                    return result(`Referred ${activity.referredCustomerEmail || 'friend'}`);
-
-                default:
-                    // Check if content field exists (pre-formatted by backend)
-                    if (activity.content) {
-                        return result(activity.content);
-                    }
-                    return result(programTitle || event || 'Points Activity');
+                return text || '';
             }
-        }
 
-        escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        renderGuestState() {
-            this.innerHTML = `
+            renderGuestState() {
+                const translation = window.AVADA_JOY?.primaryTranslation || {};
+                this.innerHTML = `
       <div class="joy-loyalty-status-guest">
         <p>
           <a href="/account/login" class="joy-loyalty-status-login-link">
-            Sign in to view your loyalty status
+            ${this.i18n('Sign in to view your loyalty status', translation)}
           </a>
         </p>
       </div>
     `;
-        }
+            }
 
-        renderErrorState(message) {
-            this.innerHTML = `
+            renderErrorState(message) {
+                this.innerHTML = `
       <div class="joy-loyalty-status-error">
         <p>${this.escapeHtml(message)}</p>
       </div>
     `;
-        }
+            }
 
-        renderLoyaltyStatus() {
-            const points = this.getCustomerPoints();
+            renderLoyaltyStatus() {
+                const points = this.getCustomerPoints();
 
-            this.innerHTML = `
+                this.innerHTML = `
       <div class="joy-loyalty-status-content">
 
         ${this.renderTopSection(points)}
@@ -723,66 +853,120 @@
       </div>
     `;
 
-            // Attach tab event listeners
-            if (this.showTabs) {
-                this.attachTabListeners();
+                // Attach tab event listeners
+                if (this.showTabs) {
+                    this.attachTabListeners();
+                }
             }
-        }
 
-        renderTopSection(points) {
-            return `
+            renderTopSection(points) {
+                return `
       <div class="joy-loyalty-status-top">
         ${this.showTierCard ? this.renderTierCard() : ''}
         ${this.showPoints ? this.renderPointsDisplay(points) : ''}
       </div>
     `;
-        }
-
-        renderTierCard() {
-            if (!this.tierData || !this.tierData.current) {
-                return '';
             }
 
-            const currentTier = this.tierData.current;
-            const nextTier = this.tierData.next;
-
-            // Use tierPoint for tier progression (not regular point)
-            const tierPoint = this.customerData?.tierPoint || 0;
-
-            // Calculate progress based on TierCard.js percentageOfProgress logic
-            let progressPercent = 0;
-            let progressText = '';
-
-            if (nextTier) {
-                // minPoint is the current tier's targetPoint (match getCurrentTier transformation)
-                const currentMinPoint = currentTier.targetPoint || 0;
-                const nextTargetPoint = nextTier.targetPoint || 0;
-                const pointsNeeded = Math.max(0, nextTargetPoint - tierPoint);
-                const pointsInTier = nextTargetPoint - currentMinPoint;
-                const pointsEarned = Math.max(0, tierPoint - currentMinPoint);
-
-                // Match TierCard.js percentageOfProgress calculation
-                if (tierPoint < currentMinPoint) {
-                    progressPercent = 0;
-                } else if (tierPoint >= nextTargetPoint) {
-                    progressPercent = 100;
-                } else {
-                    progressPercent = pointsInTier > 0 ? Math.min(100, (pointsEarned / pointsInTier) * 100) : 0;
+            renderTierCard() {
+                if (!this.tierData || !this.tierData.current) {
+                    return '';
                 }
 
-                progressText = `Earn ${pointsNeeded} ${this.formatPointText(pointsNeeded)} to ${nextTier.name}`;
-            } else {
-                progressPercent = 100;
-                progressText = 'Completed';
-            }
+                const currentTier = this.tierData.current;
+                const nextTier = this.tierData.next;
 
-            // Apply tier colors dynamically (match TierCard.js styling)
-            const bgColor = currentTier.bgCardColor || currentTier.boxBgColor || '#EAD8C0';
-            const textColor = currentTier.textColor || '#785F4D';
-            const progressColor = currentTier.progressBarColor || '#785F4D';
-            const iconColor = currentTier.iconColor || '#222222';
+                // Use tierPoint for tier progression (not regular point)
+                const tierPoint = this.customerData?.tierPoint || 0;
 
-            return `
+                // Calculate progress based on TierCard.js percentageOfProgress logic
+                let progressPercent = 0;
+                let progressText = '';
+
+                const translation = window.AVADA_JOY?.primaryTranslation || {};
+                const settings = window.AVADA_JOY?.settings || {};
+                const tierSettings = window.AVADA_JOY?.tierSettings || {};
+                const shop = window.AVADA_JOY?.shop || {};
+
+                if (nextTier && nextTier.name) {
+                    // minPoint is the current tier's targetPoint (match getCurrentTier transformation)
+                    const currentMinPoint = currentTier.targetPoint || 0;
+                    const nextTargetPoint = nextTier.targetPoint || 0;
+                    const pointsNeeded = Math.max(0, nextTargetPoint - tierPoint);
+                    const pointsInTier = nextTargetPoint - currentMinPoint;
+                    const pointsEarned = Math.max(0, tierPoint - currentMinPoint);
+
+                    // Match TierCard.js percentageOfProgress calculation
+                    if (tierPoint < currentMinPoint) {
+                        progressPercent = 0;
+                    } else if (tierPoint >= nextTargetPoint) {
+                        progressPercent = 100;
+                    } else {
+                        progressPercent = pointsInTier > 0 ? Math.min(100, (pointsEarned / pointsInTier) * 100) : 0;
+                    }
+
+                    // Use correct translation key based on tier entry method (match descriptionProgress.js)
+                    const isNextRank = tierPoint >= currentMinPoint && tierPoint < nextTargetPoint;
+                    const entryMethod = tierSettings.entryMethod || 'point_earned';
+
+                    if (isNextRank) {
+                        if (entryMethod === 'money_spent') {
+                            progressText = this.i18n('[[WidgetV2]]Spend {{remaining_spend}} to {{next_rank}}', translation, {
+                                remaining_spend: String(this.formatCurrency(pointsNeeded, shop?.currency || 'USD')),
+                                next_rank: String(nextTier.name || '')
+                            });
+                        } else if (entryMethod === 'number_of_orders') {
+                            const orderText = pointsNeeded === 1
+                                ? this.i18n('order', translation)
+                                : this.i18n('orders', translation);
+                            progressText = this.i18n('[[WidgetV2]]Place {{remaining_orders}} {{loyalty_orders}} to {{next_rank}}', translation, {
+                                remaining_orders: String(pointsNeeded || 0),
+                                loyalty_orders: String(orderText || 'orders'),
+                                next_rank: String(nextTier.name || '')
+                            });
+                        } else {
+                            // Default: point_earned
+                            const pointText = pointsNeeded === 1
+                                ? (settings.pointSingular || 'point')
+                                : (settings.pointPlural || 'points');
+                            progressText = this.i18n('[[WidgetV2]]Earn {{remaining_points}} {{loyalty_point}} to {{next_rank}}', translation, {
+                                remaining_points: String(pointsNeeded || 0),
+                                loyalty_point: String(pointText || 'points'),
+                                next_rank: String(nextTier.name || '')
+                            });
+                        }
+                    } else {
+                        // Not in next rank range yet
+                        if (entryMethod === 'money_spent') {
+                            progressText = this.i18n('[[WidgetV2]]Spend more to unlock {{next_rank}} reward!', translation, {
+                                next_rank: String(nextTier.name || '')
+                            });
+                        } else if (entryMethod === 'number_of_orders') {
+                            const orderText = this.i18n('orders', translation);
+                            progressText = this.i18n('[[WidgetV2]]Place more {{loyalty_orders}} to unlock {{next_rank}} reward!', translation, {
+                                loyalty_orders: String(orderText || 'orders'),
+                                next_rank: String(nextTier.name || '')
+                            });
+                        } else {
+                            const pointText = settings.pointPlural || 'points';
+                            progressText = this.i18n('[[WidgetV2]]Earn more {{loyalty_point}} to unlock {{next_rank}} reward!', translation, {
+                                loyalty_point: String(pointText || 'points'),
+                                next_rank: String(nextTier.name || '')
+                            });
+                        }
+                    }
+                } else {
+                    progressPercent = 100;
+                    progressText = this.i18n('[[WidgetV2]]Completed', translation);
+                }
+
+                // Apply tier colors dynamically (match TierCard.js styling)
+                const bgColor = currentTier.bgCardColor || currentTier.boxBgColor || '#EAD8C0';
+                const textColor = currentTier.textColor || '#785F4D';
+                const progressColor = currentTier.progressBarColor || '#785F4D';
+                const iconColor = currentTier.iconColor || '#222222';
+
+                return `
       <div class="joy-tier-card" style="background-color: ${bgColor}; color: ${textColor};">
         <div class="joy-tier-card-header">
           <h3 class="joy-tier-card-title" style="color: ${textColor};">${this.escapeHtml(currentTier.name)}</h3>
@@ -799,55 +983,57 @@
         </div>
       </div>
     `;
-        }
-
-        renderTierIcon(tier) {
-            // Map system tier icons to CDN URLs (match TierCard.js handleIconV2 logic)
-            const systemIconMap = {
-                'tier_bronze_icon': 'https://cdnapps.avada.io/joy/widget/bronze.webp',
-                'tier_sliver_icon': 'https://cdnapps.avada.io/joy/widget/silver.webp',
-                'tier_gold_icon': 'https://cdnapps.avada.io/joy/widget/gold.webp'
-            };
-
-            // Check for system tier icons
-            if (tier.icon && systemIconMap[tier.icon]) {
-                return `<img src="${systemIconMap[tier.icon]}" alt="${tier.name}" class="joy-tier-icon-img" />`;
             }
 
-            // Check for custom icon
-            if (tier.iconCustom && tier.iconCustom.trim() !== '') {
-                return `<img src="${tier.iconCustom}" alt="${tier.name}" class="joy-tier-icon-img" />`;
-            }
+            renderTierIcon(tier) {
+                // Map system tier icons to CDN URLs (match TierCard.js handleIconV2 logic)
+                const systemIconMap = {
+                    'tier_bronze_icon': 'https://cdnapps.avada.io/joy/widget/bronze.webp',
+                    'tier_sliver_icon': 'https://cdnapps.avada.io/joy/widget/silver.webp',
+                    'tier_gold_icon': 'https://cdnapps.avada.io/joy/widget/gold.webp'
+                };
 
-            // Try imageBlock
-            if (tier.imageBlock && tier.imageBlock.trim() !== '' && !systemIconMap[tier.imageBlock]) {
-                return `<img src="${tier.imageBlock}" alt="${tier.name}" class="joy-tier-icon-img" />`;
-            }
+                // Check for system tier icons
+                if (tier.icon && systemIconMap[tier.icon]) {
+                    return `<img src="${systemIconMap[tier.icon]}" alt="${tier.name}" class="joy-tier-icon-img" />`;
+                }
 
-            // Use SVG crown as fallback
-            return `
+                // Check for custom icon
+                if (tier.iconCustom && tier.iconCustom.trim() !== '') {
+                    return `<img src="${tier.iconCustom}" alt="${tier.name}" class="joy-tier-icon-img" />`;
+                }
+
+                // Try imageBlock
+                if (tier.imageBlock && tier.imageBlock.trim() !== '' && !systemIconMap[tier.imageBlock]) {
+                    return `<img src="${tier.imageBlock}" alt="${tier.name}" class="joy-tier-icon-img" />`;
+                }
+
+                // Use SVG crown as fallback
+                return `
       <svg class="joy-tier-icon-svg" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
         <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
       </svg>
     `;
-        }
+            }
 
-        renderPointsDisplay(points) {
-            const pointsLabel = this.dataset.pointsLabel || 'Available points:';
+            renderPointsDisplay(points) {
+                const translation = window.AVADA_JOY?.primaryTranslation || {};
+                const pointsLabel = this.dataset.pointsLabel || this.i18n('Available points:', translation);
 
-            return `
+                return `
       <div class="joy-points-display">
         <span class="joy-points-label">${pointsLabel}</span>
         <span class="joy-points-value">${points}</span>
       </div>
     `;
-        }
+            }
 
-        renderTabs() {
-            const couponsLabel = this.dataset.tabCouponsLabel || 'My coupons';
-            const historyLabel = this.dataset.tabHistoryLabel || 'Points history';
+            renderTabs() {
+                const translation = window.AVADA_JOY?.primaryTranslation || {};
+                const couponsLabel = this.dataset.tabCouponsLabel || this.i18n('My coupons', translation);
+                const historyLabel = this.dataset.tabHistoryLabel || this.i18n('Points history', translation);
 
-            return `
+                return `
       <div class="joy-loyalty-tabs">
         <button
           class="joy-loyalty-tab ${this.currentTab === 'coupons' ? 'active' : ''}"
@@ -863,10 +1049,10 @@
         </button>
       </div>
     `;
-        }
+            }
 
-        renderTabContent() {
-            return `
+            renderTabContent() {
+                return `
       <div class="joy-loyalty-tab-content">
         <div class="joy-tab-panel ${this.currentTab === 'coupons' ? 'active' : ''}" data-panel="coupons">
           ${this.renderCouponsContent()}
@@ -877,87 +1063,77 @@
         </div>
       </div>
     `;
-        }
-
-        renderCouponsContent() {
-            const emptyText = this.dataset.emptyStateText || 'No data found';
-
-            if (this.isLoadingCoupons) {
-                return `
-        <div class="joy-tab-loading">
-          <div class="joy-loading-spinner"></div>
-          <p>Loading coupons...</p>
-        </div>
-      `;
             }
 
-            if (!this.couponsData || !Array.isArray(this.couponsData) || this.couponsData.length === 0) {
-                return `
+            renderCouponsContent() {
+                const translation = window.AVADA_JOY?.primaryTranslation || {};
+                const emptyText = this.dataset.emptyStateText || this.i18n('No data found', translation);
+
+                if (this.isLoadingCoupons) {
+                    return `
+        <div class="joy-tab-loading">
+          <div class="joy-loading-spinner"></div>
+          <p>${this.i18n('Loading coupons...', translation)}</p>
+        </div>
+      `;
+                }
+
+                if (!this.couponsData || !Array.isArray(this.couponsData) || this.couponsData.length === 0) {
+                    return `
         <div class="joy-empty-state">
           <p>${emptyText}</p>
         </div>
       `;
-            }
+                }
 
-            // Render coupons table
-            let html = `
+                // Render coupons table
+                let html = `
       <div class="joy-coupons-table-wrapper">
         <table class="joy-coupons-table">
           <thead>
             <tr>
-              <th>Coupon code</th>
-              <th>Discount value</th>
-              <th>Discount program</th>
-              <th>Expiration date</th>
-              <th>Action</th>
+              <th>${this.i18n('Coupon code', translation)}</th>
+              <th>${this.i18n('Discount value', translation)}</th>
+              <th>${this.i18n('Discount program', translation)}</th>
+              <th>${this.i18n('Expiration date', translation)}</th>
+              <th>${this.i18n('Action', translation)}</th>
             </tr>
           </thead>
           <tbody>
     `;
 
-            this.couponsData.forEach(coupon => {
-                // Match ListReward.js field names exactly
-                const code = coupon.couponCode || '';
+                this.couponsData.forEach(coupon => {
+                    // Match ListReward.js field names exactly
+                    const code = coupon.couponCode || '';
 
-                // Use formatter methods that replicate React component logic
-                const discountValue = this.formatDiscountValue(coupon);
-                const discountProgram = this.formatDiscountProgramText(coupon);
-                const expiryDate = coupon.expiredAt || '';
-                const status = coupon.status || 'active';
-                const isUsed = status === 'used' || status === 'redeemed';
+                    // Use formatter methods that replicate React component logic
+                    const discountValue = this.formatDiscountValue(coupon);
+                    const discountProgram = this.formatDiscountProgramText(coupon);
+                    const expiryDate = coupon.expiredAt || '';
+                    const status = coupon.status || 'active';
+                    const isUsed = status === 'used' || status === 'redeemed';
 
-                // Check if voucher is applicable (match ListReward.js logic)
-                const cartInfo = window.AVADA_JOY?.cartInfo || {items: [], total_price: 0, item_count: 0};
-                const {applicable: isApplicable, reason} = this.isVoucherApplicable(cartInfo, coupon);
+                    // Check if voucher is applicable (match ListReward.js logic)
+                    const cartInfo = window.AVADA_JOY?.cartInfo || {items: [], total_price: 0, item_count: 0};
+                    const {applicable: isApplicable, reason} = this.isVoucherApplicable(cartInfo, coupon);
 
-                // Debug: Log applicability check
-                if (!isApplicable) {
-                    console.log('[Joy:LoyaltyStatus] Coupon not applicable:', {
-                        code,
-                        reason,
-                        status: coupon.status,
-                        discountStatus: coupon.discountStatus,
-                        isUsedCode: coupon.isUsedCode
-                    });
-                }
+                    // Get program info for free gift handling
+                    const program = coupon.program || {};
+                    const isFreeGift = program.event === 'free_gift';
+                    const specificProducts = program.specificProducts || [];
+                    const specificProductIds = program.specificProductIds || [];
+                    const [product = {}] = specificProducts;
+                    const [productId] = specificProductIds;
+                    const variants = product.variants || [];
+                    const [variant = {}] = variants;
+                    const variantId = variant.id;
 
-                // Get program info for free gift handling
-                const program = coupon.program || {};
-                const isFreeGift = program.event === 'free_gift';
-                const specificProducts = program.specificProducts || [];
-                const specificProductIds = program.specificProductIds || [];
-                const [product = {}] = specificProducts;
-                const [productId] = specificProductIds;
-                const variants = product.variants || [];
-                const [variant = {}] = variants;
-                const variantId = variant.id;
-
-                html += `
+                    html += `
         <tr class="${isUsed ? 'used' : ''}">
           <td class="joy-coupon-code">${this.escapeHtml(code)}</td>
           <td class="joy-coupon-discount">${this.escapeHtml(String(discountValue))}</td>
           <td class="joy-coupon-program">${this.escapeHtml(discountProgram)}</td>
-          <td class="joy-coupon-expiry">${expiryDate ? this.formatDate(expiryDate) : 'No expiration'}</td>
+          <td class="joy-coupon-expiry">${expiryDate ? this.formatDate(expiryDate) : this.i18n('No expiration', translation)}</td>
           <td class="joy-coupon-action">
             ${!isUsed ? `
               <div class="joy-coupon-action-wrapper">
@@ -969,129 +1145,128 @@
                   data-product-id="${productId || ''}"
                   ${!isApplicable ? 'disabled' : ''}
                 >
-                  Apply
+                  ${this.i18n('Apply', translation)}
                 </button>
                 ${!isApplicable ? `
                   <div class="joy-coupon-tooltip">${this.escapeHtml(this.getVoucherReasonMessage(reason))}</div>
                 ` : ''}
               </div>
             ` : `
-              <span class="joy-status-used">Used</span>
+              <span class="joy-status-used">${this.i18n('Used', translation)}</span>
             `}
           </td>
         </tr>
       `;
-            });
+                });
 
-            html += `
+                html += `
           </tbody>
         </table>
       </div>
     `;
 
-            // Add pagination if enabled and there are more pages
-            if (this.showPagination && (this.couponsPageInfo.hasNext || this.couponsPageInfo.hasPre)) {
-                html += this.renderPagination(this.couponsPage, this.couponsPageInfo);
-            }
-
-            return html;
-        }
-
-        async applyDiscount(button) {
-            try {
-                const code = button.dataset.couponCode;
-                const isFreeGift = button.dataset.isFreeGift === 'true';
-                const variantId = button.dataset.variantId;
-                const productId = button.dataset.productId;
-
-                // Match handleApplyDiscount from ListReward.js
-                if (isFreeGift && variantId) {
-                    // For free gifts, add to cart first
-                    const response = await fetch('/cart/add.js', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            items: [{
-                                id: variantId,
-                                quantity: 1
-                            }]
-                        })
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        alert(errorData.description || 'Failed to add free gift to cart');
-                        return;
-                    }
+                // Add pagination if enabled and there are more pages
+                if (this.showPagination && (this.couponsPageInfo.hasNext || this.couponsPageInfo.hasPre)) {
+                    html += this.renderPagination(this.couponsPage, this.couponsPageInfo);
                 }
 
-                // Apply discount code (redirect to cart with discount)
-                window.location.href = `/discount/${encodeURIComponent(code)}?redirect=/cart`;
-
-                // Dispatch custom event
-                const applyCouponEvent = new CustomEvent('joy:applyCoupon', {
-                    detail: {
-                        couponCode: code,
-                        program: window.AVADA_JOY?.program || {},
-                        customer: window.AVADA_JOY?.customer || {}
-                    }
-                });
-                window.dispatchEvent(applyCouponEvent);
-
-                console.log('[Joy:LoyaltyStatus] Discount applied successfully');
-            } catch (error) {
-                console.error('[Joy:LoyaltyStatus] Failed to apply discount', error);
-                alert('Failed to apply discount. Please try again.');
+                return html;
             }
-        }
 
-        renderHistoryContent() {
-            const emptyText = this.dataset.emptyStateText || 'No data found';
+            async applyDiscount(button) {
+                try {
+                    const code = button.dataset.couponCode;
+                    const isFreeGift = button.dataset.isFreeGift === 'true';
+                    const variantId = button.dataset.variantId;
+                    const productId = button.dataset.productId;
 
-            if (this.isLoadingHistory) {
-                return `
+                    // Match handleApplyDiscount from ListReward.js
+                    if (isFreeGift && variantId) {
+                        // For free gifts, add to cart first
+                        const response = await fetch('/cart/add.js', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                items: [{
+                                    id: variantId,
+                                    quantity: 1
+                                }]
+                            })
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            alert(errorData.description || 'Failed to add free gift to cart');
+                            return;
+                        }
+                    }
+
+                    // Apply discount code (redirect to cart with discount)
+                    window.location.href = `/discount/${encodeURIComponent(code)}?redirect=/cart`;
+
+                    // Dispatch custom event
+                    const applyCouponEvent = new CustomEvent('joy:applyCoupon', {
+                        detail: {
+                            couponCode: code,
+                            program: window.AVADA_JOY?.program || {},
+                            customer: window.AVADA_JOY?.customer || {}
+                        }
+                    });
+                    window.dispatchEvent(applyCouponEvent);
+                } catch (error) {
+                    console.error('[Joy:LoyaltyStatus] Failed to apply discount', error);
+                    alert('Failed to apply discount. Please try again.');
+                }
+            }
+
+            renderHistoryContent() {
+                const translation = window.AVADA_JOY?.primaryTranslation || {};
+                const emptyText = this.dataset.emptyStateText || this.i18n('No data found', translation);
+
+                if (this.isLoadingHistory) {
+                    return `
         <div class="joy-tab-loading">
           <div class="joy-loading-spinner"></div>
-          <p>Loading points history...</p>
+          <p>${this.i18n('Loading points history...', translation)}</p>
         </div>
       `;
-            }
+                }
 
-            if (!this.pointsHistoryData || !Array.isArray(this.pointsHistoryData) || this.pointsHistoryData.length === 0) {
-                return `
+                if (!this.pointsHistoryData || !Array.isArray(this.pointsHistoryData) || this.pointsHistoryData.length === 0) {
+                    return `
         <div class="joy-empty-state">
           <p>${emptyText}</p>
         </div>
       `;
-            }
-
-            // Render points history list
-            let html = '<div class="joy-history-list">';
-
-            this.pointsHistoryData.forEach(item => {
-                // Match ListActivity.js logic - use newPoint and oldPoint to calculate difference
-                const newPoint = parseInt(item.newPoint) || 0;
-                const oldPoint = parseInt(item.oldPoint) || 0;
-
-                // Calculate point difference like ListActivity.js does
-                let points = 0;
-                let isPositive = true;
-
-                if (newPoint || oldPoint) {
-                    points = Math.abs(newPoint - oldPoint);
-                    isPositive = newPoint >= oldPoint;
                 }
 
-                // Use formatter method that replicates React component logic
-                const formatted = this.formatActivityContent(item);
-                const action = formatted.action;
-                const description = formatted.description;
-                const date = item.createdAt || '';
+                // Render points history list
+                let html = '<div class="joy-history-list">';
 
-                // Match ListActivity.js rendering - action, optional description, points, and date
-                html += `
+                this.pointsHistoryData.forEach(item => {
+                    // Match ListActivity.js logic - use newPoint and oldPoint to calculate difference
+                    const newPoint = parseInt(item.newPoint) || 0;
+                    const oldPoint = parseInt(item.oldPoint) || 0;
+
+                    // Calculate point difference like ListActivity.js does
+                    let points = 0;
+                    let isPositive = true;
+
+                    if (newPoint || oldPoint) {
+                        points = Math.abs(newPoint - oldPoint);
+                        isPositive = newPoint >= oldPoint;
+                    }
+
+                    // Use formatter method that replicates React component logic
+                    const formatted = this.formatActivityContent(item);
+                    const action = formatted.action;
+                    const description = formatted.description;
+                    const date = item.createdAt || '';
+
+                    // Match ListActivity.js rendering - action, optional description, points, and date
+                    html += `
         <div class="joy-history-item">
           <div class="joy-history-info">
             <div class="joy-history-action">${this.escapeHtml(action)}</div>
@@ -1103,22 +1278,22 @@
           ${date ? `<div class="joy-history-date">${this.formatDate(date)}</div>` : ''}
         </div>
       `;
-            });
+                });
 
-            html += '</div>';
+                html += '</div>';
 
-            // Add pagination if enabled and there are more pages
-            if (this.showPagination && (this.historyPageInfo.hasNext || this.historyPageInfo.hasPre)) {
-                html += this.renderPagination(this.historyPage, this.historyPageInfo);
+                // Add pagination if enabled and there are more pages
+                if (this.showPagination && (this.historyPageInfo.hasNext || this.historyPageInfo.hasPre)) {
+                    html += this.renderPagination(this.historyPage, this.historyPageInfo);
+                }
+
+                return html;
             }
 
-            return html;
-        }
+            renderPagination(currentPage, pageInfo) {
+                const isLoading = this.currentTab === 'coupons' ? this.isLoadingCoupons : this.isLoadingHistory;
 
-        renderPagination(currentPage, pageInfo) {
-            const isLoading = this.currentTab === 'coupons' ? this.isLoadingCoupons : this.isLoadingHistory;
-
-            return `
+                return `
       <div class="joy-pagination">
         <button
           class="joy-pagination-btn joy-pagination-prev"
@@ -1139,177 +1314,176 @@
         </button>
       </div>
     `;
-        }
+            }
 
-        formatDate(dateString) {
-            try {
-                const date = new Date(dateString);
-                if (isNaN(date.getTime())) {
+            formatDate(dateString) {
+                try {
+                    const date = new Date(dateString);
+                    if (isNaN(date.getTime())) {
+                        return dateString;
+                    }
+
+                    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                    return date.toLocaleDateString('en-US', options);
+                } catch (error) {
                     return dateString;
                 }
-
-                const options = { year: 'numeric', month: 'short', day: 'numeric' };
-                return date.toLocaleDateString('en-US', options);
-            } catch (error) {
-                return dateString;
             }
-        }
 
-        attachTabListeners() {
-            const tabs = this.querySelectorAll('.joy-loyalty-tab');
+            attachTabListeners() {
+                const tabs = this.querySelectorAll('.joy-loyalty-tab');
 
-            tabs.forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    const targetTab = e.currentTarget.dataset.tab;
-                    this.switchTab(targetTab);
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        const targetTab = e.currentTarget.dataset.tab;
+                        this.switchTab(targetTab);
+                    });
                 });
-            });
 
-            // Attach Apply button listeners
-            this.attachApplyButtonListeners();
+                // Attach Apply button listeners
+                this.attachApplyButtonListeners();
 
-            // Attach Pagination listeners
-            this.attachPaginationListeners();
-        }
+                // Attach Pagination listeners
+                this.attachPaginationListeners();
+            }
 
-        attachApplyButtonListeners() {
-            const applyButtons = this.querySelectorAll('.joy-apply-btn');
+            attachApplyButtonListeners() {
+                const applyButtons = this.querySelectorAll('.joy-apply-btn');
 
-            applyButtons.forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    // Pass the button element itself to applyDiscount
-                    await this.applyDiscount(e.currentTarget);
-                });
-            });
-        }
-
-        attachPaginationListeners() {
-            const prevButton = this.querySelector('.joy-pagination-prev');
-            const nextButton = this.querySelector('.joy-pagination-next');
-
-            if (prevButton) {
-                prevButton.addEventListener('click', () => {
-                    this.handlePaginationChange('prev');
+                applyButtons.forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        // Pass the button element itself to applyDiscount
+                        await this.applyDiscount(e.currentTarget);
+                    });
                 });
             }
 
-            if (nextButton) {
-                nextButton.addEventListener('click', () => {
-                    this.handlePaginationChange('next');
-                });
-            }
-        }
+            attachPaginationListeners() {
+                const prevButton = this.querySelector('.joy-pagination-prev');
+                const nextButton = this.querySelector('.joy-pagination-next');
 
-        switchTab(tabName) {
-            this.currentTab = tabName;
-
-            // Update tab buttons
-            const tabs = this.querySelectorAll('.joy-loyalty-tab');
-            tabs.forEach(tab => {
-                if (tab.dataset.tab === tabName) {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
+                if (prevButton) {
+                    prevButton.addEventListener('click', () => {
+                        this.handlePaginationChange('prev');
+                    });
                 }
-            });
 
-            // Update tab panels
-            const panels = this.querySelectorAll('.joy-tab-panel');
-            panels.forEach(panel => {
-                if (panel.dataset.panel === tabName) {
-                    panel.classList.add('active');
-                } else {
-                    panel.classList.remove('active');
+                if (nextButton) {
+                    nextButton.addEventListener('click', () => {
+                        this.handlePaginationChange('next');
+                    });
                 }
-            });
+            }
 
-            // Re-attach button listeners after content changes
-            setTimeout(() => {
+            switchTab(tabName) {
+                this.currentTab = tabName;
+
+                // Update tab buttons
+                const tabs = this.querySelectorAll('.joy-loyalty-tab');
+                tabs.forEach(tab => {
+                    if (tab.dataset.tab === tabName) {
+                        tab.classList.add('active');
+                    } else {
+                        tab.classList.remove('active');
+                    }
+                });
+
+                // Update tab panels
+                const panels = this.querySelectorAll('.joy-tab-panel');
+                panels.forEach(panel => {
+                    if (panel.dataset.panel === tabName) {
+                        panel.classList.add('active');
+                    } else {
+                        panel.classList.remove('active');
+                    }
+                });
+
+                // Re-attach button listeners after content changes
+                setTimeout(() => {
+                    this.attachApplyButtonListeners();
+                    this.attachPaginationListeners();
+                }, 0);
+            }
+
+            formatPointText(points) {
+                const terminology = this.getPointTerminology();
+                return points === 1 ? terminology.singular : terminology.plural;
+            }
+
+            async handlePaginationChange(direction) {
+                const isTabCoupons = this.currentTab === 'coupons';
+                const joyInstance = window.joyInstance;
+
+                if (!joyInstance) {
+                    console.error('[Joy:LoyaltyStatus] Joy SDK not available for pagination');
+                    return;
+                }
+
+                // Set loading state and show spinner immediately
+                if (isTabCoupons) {
+                    this.isLoadingCoupons = true;
+                } else {
+                    this.isLoadingHistory = true;
+                }
+                this.updateTabContent();
+
+                if (isTabCoupons) {
+                    // Handle coupons pagination
+                    if (direction === 'next' && this.couponsData.length > 0) {
+                        const lastId = this.couponsData[this.couponsData.length - 1].id;
+                        this.couponsParams = { after: lastId, before: '' };
+                        this.couponsPage++;
+                        await this.loadCoupons(joyInstance, this.couponsParams);
+                    } else if (direction === 'prev' && this.couponsData.length > 0) {
+                        const firstId = this.couponsData[0].id;
+                        this.couponsParams = { before: firstId, after: '' };
+                        this.couponsPage--;
+                        await this.loadCoupons(joyInstance, this.couponsParams);
+                    }
+                } else {
+                    // Handle history pagination
+                    if (direction === 'next' && this.pointsHistoryData.length > 0) {
+                        const lastId = this.pointsHistoryData[this.pointsHistoryData.length - 1].id;
+                        this.historyParams = { after: lastId, before: '' };
+                        this.historyPage++;
+                        await this.loadPointsHistory(joyInstance, this.historyParams);
+                    } else if (direction === 'prev' && this.pointsHistoryData.length > 0) {
+                        const firstId = this.pointsHistoryData[0].id;
+                        this.historyParams = { before: firstId, after: '' };
+                        this.historyPage--;
+                        await this.loadPointsHistory(joyInstance, this.historyParams);
+                    }
+                }
+
+                // Re-render the current tab content with new data
+                this.updateTabContent();
+            }
+
+            updateTabContent() {
+                // Update only the tab content without re-rendering entire component
+                const couponsPanel = this.querySelector('[data-panel="coupons"]');
+                const historyPanel = this.querySelector('[data-panel="history"]');
+
+                if (couponsPanel) {
+                    couponsPanel.innerHTML = this.renderCouponsContent();
+                }
+
+                if (historyPanel) {
+                    historyPanel.innerHTML = this.renderHistoryContent();
+                }
+
+                // Re-attach event listeners
                 this.attachApplyButtonListeners();
                 this.attachPaginationListeners();
-            }, 0);
-
-            console.log('[Joy:LoyaltyStatus] Tab switched to', tabName);
+            }
         }
 
-        formatPointText(points) {
-            const terminology = this.getPointTerminology();
-            return points === 1 ? terminology.singular : terminology.plural;
+        // Register component
+        if (!customElements.get('joy-loyalty-status')) {
+            customElements.define('joy-loyalty-status', JoyLoyaltyStatus);
         }
-
-        async handlePaginationChange(direction) {
-            const isTabCoupons = this.currentTab === 'coupons';
-            const joyInstance = window.joyInstance;
-
-            if (!joyInstance) {
-                console.error('[Joy:LoyaltyStatus] Joy SDK not available for pagination');
-                return;
-            }
-
-            // Set loading state and show spinner immediately
-            if (isTabCoupons) {
-                this.isLoadingCoupons = true;
-            } else {
-                this.isLoadingHistory = true;
-            }
-            this.updateTabContent();
-
-            if (isTabCoupons) {
-                // Handle coupons pagination
-                if (direction === 'next' && this.couponsData.length > 0) {
-                    const lastId = this.couponsData[this.couponsData.length - 1].id;
-                    this.couponsParams = { after: lastId, before: '' };
-                    this.couponsPage++;
-                    await this.loadCoupons(joyInstance, this.couponsParams);
-                } else if (direction === 'prev' && this.couponsData.length > 0) {
-                    const firstId = this.couponsData[0].id;
-                    this.couponsParams = { before: firstId, after: '' };
-                    this.couponsPage--;
-                    await this.loadCoupons(joyInstance, this.couponsParams);
-                }
-            } else {
-                // Handle history pagination
-                if (direction === 'next' && this.pointsHistoryData.length > 0) {
-                    const lastId = this.pointsHistoryData[this.pointsHistoryData.length - 1].id;
-                    this.historyParams = { after: lastId, before: '' };
-                    this.historyPage++;
-                    await this.loadPointsHistory(joyInstance, this.historyParams);
-                } else if (direction === 'prev' && this.pointsHistoryData.length > 0) {
-                    const firstId = this.pointsHistoryData[0].id;
-                    this.historyParams = { before: firstId, after: '' };
-                    this.historyPage--;
-                    await this.loadPointsHistory(joyInstance, this.historyParams);
-                }
-            }
-
-            // Re-render the current tab content with new data
-            this.updateTabContent();
-        }
-
-        updateTabContent() {
-            // Update only the tab content without re-rendering entire component
-            const couponsPanel = this.querySelector('[data-panel="coupons"]');
-            const historyPanel = this.querySelector('[data-panel="history"]');
-
-            if (couponsPanel) {
-                couponsPanel.innerHTML = this.renderCouponsContent();
-            }
-
-            if (historyPanel) {
-                historyPanel.innerHTML = this.renderHistoryContent();
-            }
-
-            // Re-attach event listeners
-            this.attachApplyButtonListeners();
-            this.attachPaginationListeners();
-        }
-    }
-
-    // Register component
-    if (!customElements.get('joy-loyalty-status')) {
-        customElements.define('joy-loyalty-status', JoyLoyaltyStatus);
-    }
-</script>
+    </script>
+{% endraw %}
 
 <style>
     .joy-loyalty-status-section {
