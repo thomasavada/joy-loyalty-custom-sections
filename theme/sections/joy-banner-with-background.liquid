@@ -19,6 +19,7 @@
     - Customizable overlay color and opacity
     - Dual CTAs with primary/secondary button styles
     - Different images for desktop and mobile
+    - Video backgrounds with image poster/facade (autoplays when loaded)
     - Adapt to image height option (desktop)
     - Optional footer link
 
@@ -38,6 +39,7 @@
 
   Customization (Theme Editor):
     - Background images (desktop and mobile)
+    - Background videos (desktop and mobile, optional)
     - Image position (9 alignment options)
     - Overlay color and opacity
     - Text color
@@ -121,7 +123,24 @@
   z-index: 1;
   }
 
-  .banner-with-background__image img {
+  .banner-with-background__image img,
+  .banner-with-background__image video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: {{ section.settings.image_position | default: "center" }};
+  }
+
+  .banner-with-background__video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  }
+
+  .banner-with-background__video video {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -136,12 +155,28 @@
   display: none;
   }
 
+  .banner-with-background__video--mobile {
+  display: block;
+  }
+
+  .banner-with-background__video--desktop {
+  display: none;
+  }
+
   @media screen and (min-width: 750px) {
   .banner-with-background__image--mobile {
   display: none;
   }
 
   .banner-with-background__image--desktop {
+  display: block;
+  }
+
+  .banner-with-background__video--mobile {
+  display: none;
+  }
+
+  .banner-with-background__video--desktop {
   display: block;
   }
   }
@@ -154,14 +189,14 @@
   height: 100%;
   background-color: var(--overlay-color);
   opacity: var(--overlay-opacity);
-  z-index: 2;
+  z-index: 3;
   pointer-events: none !important;
   display: block !important;
   }
 
   .banner-with-background__content {
   position: relative;
-  z-index: 2;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -528,6 +563,74 @@
       {%- endif -%}
     </div>
 
+    {%- comment -%} Video background layer {%- endcomment -%}
+    {%- if section.settings.video != blank or section.settings.mobile_video != blank -%}
+      <div class="banner-with-background__video">
+        {%- if section.settings.mobile_video != blank -%}
+          {%- assign mobile_poster = '' -%}
+          {%- if section.settings.mobile_image != blank -%}
+            {%- assign mobile_poster = section.settings.mobile_image | image_url: width: 1920 -%}
+          {%- endif -%}
+          <div class="banner-with-background__video--mobile">
+            <video
+              autoplay
+              muted
+              loop
+              playsinline
+              {% if mobile_poster != blank %}poster="{{ mobile_poster }}"{% endif %}
+            >
+              {%- for source in section.settings.mobile_video.sources -%}
+                <source src="{{ source.url }}" type="{{ source.mime_type }}">
+              {%- endfor -%}
+            </video>
+          </div>
+        {%- endif -%}
+
+        {%- if section.settings.video != blank -%}
+          {%- assign desktop_poster = '' -%}
+          {%- if section.settings.image != blank -%}
+            {%- assign desktop_poster = section.settings.image | image_url: width: 3840 -%}
+          {%- elsif section.settings.mobile_image != blank -%}
+            {%- assign desktop_poster = section.settings.mobile_image | image_url: width: 3840 -%}
+          {%- endif -%}
+          <div class="banner-with-background__video--desktop">
+            <video
+              autoplay
+              muted
+              loop
+              playsinline
+              {% if desktop_poster != blank %}poster="{{ desktop_poster }}"{% endif %}
+            >
+              {%- for source in section.settings.video.sources -%}
+                <source src="{{ source.url }}" type="{{ source.mime_type }}">
+              {%- endfor -%}
+            </video>
+          </div>
+        {%- elsif section.settings.mobile_video != blank -%}
+          {%- comment -%} Fallback to mobile video on desktop if no desktop video {%- endcomment -%}
+          {%- assign fallback_poster = '' -%}
+          {%- if section.settings.image != blank -%}
+            {%- assign fallback_poster = section.settings.image | image_url: width: 3840 -%}
+          {%- elsif section.settings.mobile_image != blank -%}
+            {%- assign fallback_poster = section.settings.mobile_image | image_url: width: 3840 -%}
+          {%- endif -%}
+          <div class="banner-with-background__video--desktop">
+            <video
+              autoplay
+              muted
+              loop
+              playsinline
+              {% if fallback_poster != blank %}poster="{{ fallback_poster }}"{% endif %}
+            >
+              {%- for source in section.settings.mobile_video.sources -%}
+                <source src="{{ source.url }}" type="{{ source.mime_type }}">
+              {%- endfor -%}
+            </video>
+          </div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
     {%- if section.settings.show_overlay -%}
       <div class="banner-with-background__overlay"></div>
     {%- endif -%}
@@ -672,6 +775,18 @@
       "id": "mobile_image",
       "label": "Background image (Mobile)",
       "info": "Optional: Different background image for mobile devices. If not set, desktop image will be used."
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "Background video (Desktop)",
+      "info": "Optional: Video background for desktop. Image will be used as poster/facade until video loads and autoplays."
+    },
+    {
+      "type": "video",
+      "id": "mobile_video",
+      "label": "Background video (Mobile)",
+      "info": "Optional: Video background for mobile. If not set and desktop video exists, desktop video will be used."
     },
     {
       "type": "select",
