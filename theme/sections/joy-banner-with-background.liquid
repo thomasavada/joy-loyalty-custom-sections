@@ -68,6 +68,7 @@
   .section-{{ section.id }} {
   --button-primary-bg: {{ section.settings.button_primary_bg | default: "#121212" }};
   --button-primary-text: {{ section.settings.button_primary_text | default: "#ffffff" }};
+  --button-secondary-bg: {{ section.settings.button_secondary_bg | default: "transparent" }};
   --button-secondary-border: {{ section.settings.button_secondary_border | default: "#121212" }};
   --button-secondary-text: {{ section.settings.button_secondary_text | default: "#121212" }};
   --overlay-color: {{ section.settings.overlay_color | default: "#000000" }};
@@ -284,6 +285,22 @@
   .banner-with-background__heading {
   margin: 0 0 1rem;
   color: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  }
+
+  .banner-with-background__heading.h-xxl {
+  font-size: 4.5rem !important;
+  line-height: 1.05 !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  }
+
+  .banner-with-background__heading.h-xl {
+  font-size: 4rem !important;
+  line-height: 1.08 !important;
+  color: inherit !important;
+  font-family: inherit !important;
   }
 
   .banner-with-background__heading.h0 {
@@ -302,6 +319,18 @@
   }
 
   @media screen and (max-width: 749px) {
+  .banner-with-background__heading.h-xxl {
+  font-size: 2.5rem !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  }
+
+  .banner-with-background__heading.h-xl {
+  font-size: 2.25rem !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  }
+
   .banner-with-background__heading.h0 {
   font-size: 2rem;
   }
@@ -368,30 +397,25 @@
   text-align: center;
   }
 
-  /* Button Size Variants */
+  /* Button Size Variants (Padding only) */
   .section-{{ section.id }} .button--x-small {
-  padding: 0.5rem 1rem;
-  font-size: 0.75rem;
+  padding: 0.5rem 1rem !important;
   }
 
   .section-{{ section.id }} .button--small {
-  padding: 0.75rem 1.5rem;
-  font-size: 0.875rem;
+  padding: 0.75rem 1.5rem !important;
   }
 
   .section-{{ section.id }} .button--medium {
-  padding: 1rem 2rem;
-  font-size: 1rem;
+  padding: 1rem 2rem !important;
   }
 
   .section-{{ section.id }} .button--large {
-  padding: 1.25rem 2.5rem;
-  font-size: 1.125rem;
+  padding: 1.25rem 2.5rem !important;
   }
 
   .section-{{ section.id }} .button--x-large {
-  padding: 1.5rem 3rem;
-  font-size: 1.25rem;
+  padding: 1.5rem 3rem !important;
   }
 
   .section-{{ section.id }} .button {
@@ -415,9 +439,13 @@
   }
 
   .section-{{ section.id }} .button--secondary {
-  background-color: transparent !important;
+  background-color: var(--button-secondary-bg) !important;
   color: var(--button-secondary-text) !important;
   border: 2px solid var(--button-secondary-border) !important;
+  }
+
+  .section-{{ section.id }} .button--secondary.button--outline {
+  background-color: transparent !important;
   }
 
   .section-{{ section.id }} .button--secondary:not([aria-disabled="true"]):hover {
@@ -531,6 +559,7 @@
               <div
                 class="banner-with-background__heading rte {{ block.settings.heading_size }}"
                 {{ block.shopify_attributes }}
+                {% if block.settings.heading_color != blank %}style="color: {{ block.settings.heading_color }} !important;"{% endif %}
               >
                 {{ greeting_output }}
               </div>
@@ -538,6 +567,7 @@
               <div
                 class="banner-with-background__heading rte {{ block.settings.heading_size }}"
                 {{ block.shopify_attributes }}
+                {% if block.settings.heading_color != blank %}style="color: {{ block.settings.heading_color }} !important;"{% endif %}
               >
                 {{ block.settings.heading }}
               </div>
@@ -546,6 +576,7 @@
             <p
               class="banner-with-background__text banner-with-background__text--caption {{ block.settings.text_style }} {{ block.settings.text_style }}--{{ block.settings.text_size }}"
               {{ block.shopify_attributes }}
+              {% if block.settings.caption_color != blank %}style="color: {{ block.settings.caption_color }} !important;"{% endif %}
             >
               {%- if customer and block.settings.show_customer_subtitle -%}
                 {{ block.settings.customer_subtitle | escape }}
@@ -563,6 +594,7 @@
             </div>
           {%- when 'buttons' -%}
             {%- assign button_size_class = 'button--' | append: block.settings.button_size | default: 'medium' -%}
+            {%- assign button_font_size = block.settings.button_text_size | default: 16 -%}
             <div class="banner-with-background__buttons" {{ block.shopify_attributes }}>
               {%- if customer and block.settings.show_customer_buttons -%}
                 {%- comment -%} Buttons for logged-in customers {%- endcomment -%}
@@ -570,6 +602,7 @@
                   <a
                     href="{{ block.settings.customer_button_link_1 | default: '#' }}"
                     class="button banner-with-background__button {{ button_size_class }}{% if block.settings.customer_button_style_secondary_1 %} button--secondary{% else %} button--primary{% endif %}"
+                    style="font-size: {{ button_font_size }}px !important;"
                   >
                     {{ block.settings.customer_button_label_1 | escape }}
                   </a>
@@ -578,6 +611,7 @@
                   <a
                     href="{{ block.settings.customer_button_link_2 | default: '#' }}"
                     class="button banner-with-background__button {{ button_size_class }}{% if block.settings.customer_button_style_secondary_2 %} button--secondary{% else %} button--primary{% endif %}"
+                    style="font-size: {{ button_font_size }}px !important;"
                   >
                     {{ block.settings.customer_button_label_2 | escape }}
                   </a>
@@ -588,6 +622,7 @@
                   <a
                     href="{{ block.settings.button_link_1 | default: '#' }}"
                     class="button banner-with-background__button {{ button_size_class }}{% if block.settings.button_style_secondary_1 %} button--secondary{% else %} button--primary{% endif %}"
+                    style="font-size: {{ button_font_size }}px !important;"
                   >
                     {{ block.settings.button_label_1 | escape }}
                   </a>
@@ -595,7 +630,8 @@
                 {%- if block.settings.button_label_2 != blank -%}
                   <a
                     href="{{ block.settings.button_link_2 | default: '#' }}"
-                    class="button banner-with-background__button {{ button_size_class }}{% if block.settings.button_style_secondary_2 %} button--secondary{% else %} button--primary{% endif %}"
+                    class="button banner-with-background__button {{ button_size_class }}{% if block.settings.button_style_secondary_2 %} button--secondary{% if block.settings.button_outline_style_2 %} button--outline{% endif %}{% else %} button--primary{% endif %}"
+                    style="font-size: {{ button_font_size }}px !important;"
                   >
                     {{ block.settings.button_label_2 | escape }}
                   </a>
@@ -883,6 +919,13 @@
     },
     {
       "type": "color",
+      "id": "button_secondary_bg",
+      "label": "Secondary button background",
+      "default": "rgba(0,0,0,0)",
+      "info": "Background color for secondary button"
+    },
+    {
+      "type": "color",
       "id": "button_secondary_border",
       "label": "Secondary button border",
       "default": "#ffffff"
@@ -969,10 +1012,24 @@
             {
               "value": "h0",
               "label": "Large"
+            },
+            {
+              "value": "h-xl",
+              "label": "Extra Large"
+            },
+            {
+              "value": "h-xxl",
+              "label": "Extra Extra Large"
             }
           ],
           "default": "h1",
           "label": "Heading size"
+        },
+        {
+          "type": "color",
+          "id": "heading_color",
+          "label": "Heading text color",
+          "info": "Leave empty to use default text color from section settings"
         },
         {
           "type": "checkbox",
@@ -1037,6 +1094,12 @@
           "label": "Text size"
         },
         {
+          "type": "color",
+          "id": "caption_color",
+          "label": "Caption text color",
+          "info": "Leave empty to use default text color from section settings"
+        },
+        {
           "type": "checkbox",
           "id": "show_customer_subtitle",
           "default": false,
@@ -1099,7 +1162,7 @@
         {
           "type": "select",
           "id": "button_size",
-          "label": "Button Size",
+          "label": "Button Size (Padding)",
           "options": [
             {
               "value": "x-small",
@@ -1122,7 +1185,19 @@
               "label": "Extra Large"
             }
           ],
-          "default": "medium"
+          "default": "medium",
+          "info": "Controls the button padding (size)"
+        },
+        {
+          "type": "range",
+          "id": "button_text_size",
+          "min": 12,
+          "max": 24,
+          "step": 1,
+          "unit": "px",
+          "label": "Button Text Size",
+          "default": 16,
+          "info": "Controls the button text font size"
         },
         {
           "type": "header",
@@ -1164,7 +1239,15 @@
           "type": "checkbox",
           "id": "button_style_secondary_2",
           "default": true,
-          "label": "Use outline button style for Button 2"
+          "label": "Use secondary button style for Button 2",
+          "info": "If checked, uses secondary button colors (background, border, text). If unchecked, uses primary button colors."
+        },
+        {
+          "type": "checkbox",
+          "id": "button_outline_style_2",
+          "default": true,
+          "label": "Use outline style for Button 2",
+          "info": "If checked, button will have transparent background (outline style). If unchecked, uses the background color from Button Styling section."
         },
         {
           "type": "header",
