@@ -885,11 +885,24 @@ if (!customElements.get('joy-redeem-programs')) {
     }
 
     generateIconHTML(program) {
-      const iconUrl = program.loyaltyPageCustomIcon;
-      const fallbackEmoji = this.getFallbackEmoji(program.event);
-      const hasValid = this.hasValidIcon(iconUrl);
+      // Priority: loyaltyPageCustomIcon > specificProducts[0].image.src > fallback emoji
+      let iconUrl = null;
 
-      if (hasValid) {
+      // First, check if loyaltyPageCustomIcon is set
+      if (this.hasValidIcon(program.loyaltyPageCustomIcon)) {
+        iconUrl = program.loyaltyPageCustomIcon;
+      }
+      // If no custom icon, try to get product image from specificProducts
+      else if (program.specificProducts &&
+               program.specificProducts.length > 0 &&
+               program.specificProducts[0].image &&
+               program.specificProducts[0].image.src) {
+        iconUrl = program.specificProducts[0].image.src;
+      }
+
+      const fallbackEmoji = this.getFallbackEmoji(program.event);
+
+      if (iconUrl) {
         return `
           <img src="${iconUrl}" alt="${program.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
           <div style="display:none; width:100%; height:100%; background:rgba(212, 165, 116, 0.08); border-radius:inherit; align-items:center; justify-content:center; font-size:18px; color:#D4A574;">${fallbackEmoji}</div>
@@ -1016,21 +1029,19 @@ if (!customElements.get('joy-redeem-programs')) {
       return {
         isDynamic,
         selectedPoints,
-        maxPoints,
-        iconUrl: program.loyaltyPageCustomIcon,
-        fallbackEmoji: this.getFallbackEmoji(program.event),
-        hasValidIcon: this.hasValidIcon(program.loyaltyPageCustomIcon)
+        maxPoints
       };
     }
 
     generateModalHTML(program, modalData) {
-      const { isDynamic, selectedPoints, maxPoints, iconUrl, fallbackEmoji, hasValidIcon } = modalData;
+      const { isDynamic, selectedPoints, maxPoints } = modalData;
+      const fallbackEmoji = this.getFallbackEmoji(program.event);
 
       return `
         <div class="joy-redeem-modal-overlay">
           <div class="joy-redeem-modal-content">
             <button class="joy-redeem-modal-close">&times;</button>
-            ${this.generateModalHeader(program, iconUrl, fallbackEmoji, hasValidIcon)}
+            ${this.generateModalHeader(program, null, fallbackEmoji, false)}
             ${this.generateModalBody(program, isDynamic, selectedPoints, maxPoints)}
           </div>
         </div>
@@ -1038,7 +1049,7 @@ if (!customElements.get('joy-redeem-programs')) {
     }
 
     generateModalHeader(program, iconUrl, fallbackEmoji, hasValidIcon) {
-      const iconHTML = this.generateModalIconHTML(iconUrl, fallbackEmoji, hasValidIcon, program.title);
+      const iconHTML = this.generateModalIconHTML(program, fallbackEmoji);
       return `
         <div class="joy-redeem-modal-header">
           <div style="display: flex; align-items: flex-start; gap: 16px; text-align: left;">
@@ -1054,10 +1065,25 @@ if (!customElements.get('joy-redeem-programs')) {
       `;
     }
 
-    generateModalIconHTML(iconUrl, fallbackEmoji, hasValidIcon, altText) {
-      if (hasValidIcon) {
+    generateModalIconHTML(program, fallbackEmoji) {
+      // Priority: loyaltyPageCustomIcon > specificProducts[0].image.src > fallback emoji
+      let iconUrl = null;
+
+      // First, check if loyaltyPageCustomIcon is set
+      if (this.hasValidIcon(program.loyaltyPageCustomIcon)) {
+        iconUrl = program.loyaltyPageCustomIcon;
+      }
+      // If no custom icon, try to get product image from specificProducts
+      else if (program.specificProducts &&
+               program.specificProducts.length > 0 &&
+               program.specificProducts[0].image &&
+               program.specificProducts[0].image.src) {
+        iconUrl = program.specificProducts[0].image.src;
+      }
+
+      if (iconUrl) {
         return `
-          <img src="${iconUrl}" alt="${altText}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <img src="${iconUrl}" alt="${program.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
           <div style="display:none; width:36px; height:36px; background:#f0f0f0; border-radius:8px; align-items:center; justify-content:center; font-size:18px; color:#888;">${fallbackEmoji}</div>
         `;
       }
@@ -1329,7 +1355,7 @@ if (!customElements.get('joy-redeem-programs')) {
             <div class="joy-redeem-modal-header">
               <div style="display: flex; align-items: flex-start; gap: 16px; text-align: left;">
                 ${this.showIcon ? `<div class="joy-redeem-modal-icon" style="margin: 0; flex-shrink: 0;">
-                  ${this.generateModalIconHTML(program.loyaltyPageCustomIcon, this.getFallbackEmoji(program.event), this.hasValidIcon(program.loyaltyPageCustomIcon), program.title)}
+                  ${this.generateModalIconHTML(program, this.getFallbackEmoji(program.event))}
                 </div>` : ''}
                 <div style="flex: 1;">
                   <h3 class="joy-redeem-modal-title" style="margin: 0 0 8px 0;">${program.title}</h3>
