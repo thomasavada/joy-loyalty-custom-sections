@@ -1,0 +1,668 @@
+<style>
+  /* Loyalty Signup Popup - Minimal & Sleek */
+  .loyalty-popup-modal {
+    --popup-bg-color: {{ section.settings.popup_bg_color }};
+    --popup-text-color: {{ section.settings.popup_text_color }};
+    --popup-button-bg: {{ section.settings.button_bg_color }};
+    --popup-button-text: {{ section.settings.button_text_color }};
+
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+  }
+
+  .loyalty-popup-modal[open] {
+    display: flex;
+  }
+
+  .loyalty-popup-modal__overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .loyalty-popup-modal__overlay::-webkit-details-marker {
+    display: none;
+  }
+
+  .loyalty-popup-modal__content {
+    position: relative;
+    z-index: 2;
+    background: var(--popup-bg-color, #fff);
+    border-radius: 8px;
+    max-width: 90%;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    animation: popup-fade-in 0.25s ease-out;
+  }
+
+  @media screen and (min-width: 750px) {
+    .loyalty-popup-modal__content {
+      max-width: {{ section.settings.popup_size }};
+      {% assign size_num = section.settings.popup_size | remove: 'px' | times: 1 %}
+      {% assign height_num = size_num | times: 0.65 | round %}
+      height: {{ height_num }}px;
+      max-height: {{ height_num }}px;
+    }
+  }
+
+  @keyframes popup-fade-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .loyalty-popup-modal__close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 3;
+    transition: opacity 0.2s ease;
+    color: var(--popup-text-color, #000);
+    opacity: 0.5;
+  }
+
+  .loyalty-popup-modal__close:hover {
+    opacity: 1;
+  }
+
+  .loyalty-popup-modal__inner {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  @media screen and (min-width: 750px) {
+    .loyalty-popup-modal__inner {
+      flex-direction: {{ section.settings.image_position | default: 'row' }};
+    }
+  }
+
+  .loyalty-popup-modal__image {
+    flex-shrink: 0;
+    width: 100%;
+    max-height: 200px;
+    overflow: hidden;
+    border-radius: 8px 8px 0 0;
+  }
+
+  @media screen and (min-width: 750px) {
+    .loyalty-popup-modal__image {
+      width: 45%;
+      max-height: none;
+      {% if section.settings.image_position == 'row-reverse' %}
+      border-radius: 0 8px 8px 0;
+      {% else %}
+      border-radius: 8px 0 0 8px;
+      {% endif %}
+    }
+  }
+
+  .loyalty-popup-modal__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .loyalty-popup-modal__body {
+    padding: 40px 32px;
+    text-align: {{ section.settings.text_alignment }};
+    color: var(--popup-text-color, #000);
+    font-family: inherit;
+    width: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  @media screen and (min-width: 750px) {
+    .loyalty-popup-modal__body {
+      padding: 50px 40px;
+    }
+
+    {% if section.settings.show_image %}
+    .loyalty-popup-modal__body {
+      width: 55%;
+    }
+    {% endif %}
+  }
+
+  .loyalty-popup-modal__heading {
+    margin: 0 0 12px 0;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--popup-text-color, #000);
+    font-family: inherit;
+  }
+
+  @media screen and (min-width: 750px) {
+    .loyalty-popup-modal__heading {
+      font-size: 24px;
+    }
+  }
+
+  .loyalty-popup-modal__subheading {
+    margin: 0 0 32px 0;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--popup-text-color, #000);
+    opacity: 0.7;
+    font-family: inherit;
+  }
+
+  .loyalty-popup-modal__subheading p {
+    margin: 0;
+  }
+
+  .loyalty-popup-modal__reward {
+    margin: 0 0 24px 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .loyalty-popup-modal__reward-text {
+    display: inline-block;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--popup-text-color, #000);
+    font-family: inherit;
+  }
+
+  .loyalty-popup-modal__description {
+    margin: 0 0 32px 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--popup-text-color, #000);
+    opacity: 0.65;
+    font-family: inherit;
+  }
+
+  .loyalty-popup-modal__description p {
+    margin: 0;
+  }
+
+  .loyalty-popup-modal__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .loyalty-popup-modal__cta {
+    width: 100%;
+    padding: 14px 28px;
+    background: var(--popup-button-bg, #000);
+    color: var(--popup-button-text, #fff);
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    font-family: inherit;
+  }
+
+  .loyalty-popup-modal__cta:hover {
+    opacity: 0.9;
+  }
+
+  .loyalty-popup-modal__dismiss {
+    width: 100%;
+    padding: 10px 28px;
+    background: transparent;
+    color: var(--popup-text-color, #000);
+    border: none;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    opacity: 0.5;
+    text-decoration: underline;
+    font-family: inherit;
+  }
+
+  .loyalty-popup-modal__dismiss:hover {
+    opacity: 0.8;
+  }
+
+  /* Mobile optimizations */
+  @media screen and (max-width: 749px) {
+    .loyalty-popup-modal__content {
+      max-width: calc(100% - 32px);
+      width: calc(100% - 32px);
+      max-height: 90vh;
+      border-radius: 12px;
+      margin: 0 16px;
+    }
+
+    .loyalty-popup-modal__image {
+      max-height: 180px;
+    }
+
+    .loyalty-popup-modal__body {
+      padding: 28px 20px;
+    }
+
+    .loyalty-popup-modal__heading {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .loyalty-popup-modal__description {
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .loyalty-popup-modal__cta {
+      padding: 13px 24px;
+      font-size: 14px;
+    }
+
+    .loyalty-popup-modal__dismiss {
+      padding: 8px 24px;
+      font-size: 12px;
+    }
+  }
+
+  /* Prevent body scroll when popup is open */
+  body.overflow-hidden {
+    overflow: hidden;
+  }
+
+  /* Accessibility */
+  .loyalty-popup-modal__cta:focus,
+  .loyalty-popup-modal__dismiss:focus,
+  .loyalty-popup-modal__close:focus {
+    outline: 2px solid var(--popup-button-bg, #000);
+    outline-offset: 2px;
+  }
+</style>
+
+<details class="loyalty-popup-modal" id="LoyaltyPopup-{{ section.id }}" data-section-id="{{ section.id }}">
+  <summary class="loyalty-popup-modal__overlay" aria-label="Close loyalty popup"></summary>
+  <div class="loyalty-popup-modal__content">
+    <button type="button" class="loyalty-popup-modal__close" aria-label="Close">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <div class="loyalty-popup-modal__inner">
+      {%- if section.settings.show_image and section.settings.image != blank -%}
+        <div class="loyalty-popup-modal__image">
+          <img
+            srcset="
+              {%- if section.settings.image.width >= 375 -%}{{ section.settings.image | image_url: width: 375 }} 375w,{%- endif -%}
+              {%- if section.settings.image.width >= 550 -%}{{ section.settings.image | image_url: width: 550 }} 550w,{%- endif -%}
+              {%- if section.settings.image.width >= 750 -%}{{ section.settings.image | image_url: width: 750 }} 750w,{%- endif -%}
+              {{ section.settings.image | image_url }} {{ section.settings.image.width }}w
+            "
+            sizes="(min-width: 750px) 550px, 100vw"
+            src="{{ section.settings.image | image_url: width: 550 }}"
+            loading="eager"
+            alt="{{ section.settings.image.alt | escape }}"
+            width="{{ section.settings.image.width }}"
+            height="{{ section.settings.image.height }}"
+          >
+        </div>
+      {%- endif -%}
+
+      <div class="loyalty-popup-modal__body">
+        {%- if section.settings.heading != blank -%}
+          <div class="loyalty-popup-modal__heading rte">{{ section.settings.heading }}</div>
+        {%- endif -%}
+
+        {%- if section.settings.description != blank -%}
+          <div class="loyalty-popup-modal__description rte">
+            {{ section.settings.description }}
+          </div>
+        {%- endif -%}
+
+        <div class="loyalty-popup-modal__actions">
+          <button type="button" class="loyalty-popup-modal__cta" data-loyalty-action="open-widget">
+            {{ section.settings.button_text }}
+          </button>
+
+          {%- if section.settings.show_no_thanks -%}
+            <button type="button" class="loyalty-popup-modal__dismiss">
+              {{ section.settings.no_thanks_text }}
+            </button>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+  </div>
+</details>
+
+<script>
+(function() {
+  const popup = document.getElementById('LoyaltyPopup-{{ section.id }}');
+  const sectionId = '{{ section.id }}';
+  const showOnce = {{ section.settings.show_once_per_session }};
+  const delay = {{ section.settings.popup_delay | times: 1000 }};
+  const showOnHomepageOnly = {{ section.settings.show_on_homepage_only }};
+  const showOnlyToGuests = {{ section.settings.show_only_to_guests }};
+  const isLoggedIn = {{ customer | json }} !== null;
+  const storageKey = `loyalty-popup-dismissed-${sectionId}`;
+
+  if (!popup) return;
+
+  // Check if we should show the popup
+  function shouldShowPopup() {
+    // Check if dismissed previously
+    if (showOnce && localStorage.getItem(storageKey)) {
+      return false;
+    }
+
+    // Check if should only show on homepage
+    if (showOnHomepageOnly && window.location.pathname !== '/') {
+      return false;
+    }
+
+    // Check if should only show to guests (non-logged-in customers)
+    if (showOnlyToGuests && isLoggedIn) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // Open the popup
+  function openPopup() {
+    if (!shouldShowPopup()) return;
+
+    popup.setAttribute('open', '');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  // Close the popup
+  function closePopup(markAsDismissed = false) {
+    popup.removeAttribute('open');
+    document.body.classList.remove('overflow-hidden');
+
+    if (markAsDismissed && showOnce) {
+      localStorage.setItem(storageKey, 'true');
+    }
+  }
+
+  // Open Joy loyalty widget
+  function openLoyaltyWidget() {
+    // Close the popup first
+    closePopup(true);
+
+    // Wait a moment then open the Joy widget
+    setTimeout(() => {
+      // Try multiple methods to open Joy widget
+      if (window.joyInstance && typeof window.joyInstance.open === 'function') {
+        window.joyInstance.open();
+      } else if (window.joyInstance && typeof window.joyInstance.toggle === 'function') {
+        window.joyInstance.toggle();
+      } else {
+        // Fallback: try clicking the Joy widget launcher button
+        const joyLauncher = document.querySelector('[data-joy-launcher], .joy-launcher, #joy-widget-launcher');
+        if (joyLauncher) {
+          joyLauncher.click();
+        } else {
+          console.warn('Joy loyalty widget not found');
+        }
+      }
+    }, 300);
+  }
+
+  // Event listeners
+  const closeButton = popup.querySelector('.loyalty-popup-modal__close');
+  const overlay = popup.querySelector('.loyalty-popup-modal__overlay');
+  const ctaButton = popup.querySelector('[data-loyalty-action="open-widget"]');
+  const dismissButton = popup.querySelector('.loyalty-popup-modal__dismiss');
+
+  if (closeButton) {
+    closeButton.addEventListener('click', () => closePopup(true));
+  }
+
+  if (overlay) {
+    overlay.addEventListener('click', () => closePopup(true));
+  }
+
+  if (ctaButton) {
+    ctaButton.addEventListener('click', openLoyaltyWidget);
+  }
+
+  if (dismissButton) {
+    dismissButton.addEventListener('click', () => closePopup(true));
+  }
+
+  // Handle ESC key
+  document.addEventListener('keyup', (event) => {
+    if (event.code === 'ESCAPE' && popup.hasAttribute('open')) {
+      closePopup(true);
+    }
+  });
+
+  // Show popup after delay
+  if (delay >= 0) {
+    setTimeout(openPopup, delay);
+  }
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Loyalty Signup Popup",
+  "tag": "section",
+  "class": "section-loyalty-popup",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Pop-up Content"
+    },
+    {
+      "type": "richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "<p>Join us to get $8 off your first online order!</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "description",
+      "label": "Body Text",
+      "default": "<p>Sign up for our loyalty program and start earning rewards today!</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Sign up / Login"
+    },
+    {
+      "type": "select",
+      "id": "text_alignment",
+      "label": "Text Alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_no_thanks",
+      "label": "Show 'No thanks' button",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "no_thanks_text",
+      "label": "'No thanks' button text",
+      "default": "No, thanks"
+    },
+    {
+      "type": "header",
+      "content": "Image"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_image",
+      "label": "Show image",
+      "default": true
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image",
+      "info": "Recommended: 550x550px"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "Image Position",
+      "options": [
+        {
+          "value": "row",
+          "label": "Left"
+        },
+        {
+          "value": "row-reverse",
+          "label": "Right"
+        }
+      ],
+      "default": "row",
+      "info": "Choose whether the image appears on the left or right side (desktop only)"
+    },
+    {
+      "type": "header",
+      "content": "Display Settings"
+    },
+    {
+      "type": "select",
+      "id": "popup_size",
+      "label": "Popup Size",
+      "options": [
+        {
+          "value": "400px",
+          "label": "Small"
+        },
+        {
+          "value": "550px",
+          "label": "Medium"
+        },
+        {
+          "value": "700px",
+          "label": "Large"
+        },
+        {
+          "value": "900px",
+          "label": "Extra Large"
+        }
+      ],
+      "default": "550px"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_homepage_only",
+      "label": "Show on homepage only",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_only_to_guests",
+      "label": "Show only to guest customers",
+      "default": true,
+      "info": "Only show the popup to non-logged-in customers"
+    },
+    {
+      "type": "range",
+      "id": "popup_delay",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "unit": "s",
+      "label": "Delay before showing",
+      "default": 3,
+      "info": "Time in seconds before the popup appears"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_once_per_session",
+      "label": "Show only once",
+      "default": true,
+      "info": "If enabled, the popup will only show once and won't appear again after being dismissed"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "popup_bg_color",
+      "label": "Background color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "popup_text_color",
+      "label": "Text color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "button_bg_color",
+      "label": "Button background",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text color",
+      "default": "#FFFFFF"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Loyalty Signup Popup"
+    }
+  ]
+}
+{% endschema %}
