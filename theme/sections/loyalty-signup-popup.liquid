@@ -238,6 +238,9 @@
     cursor: pointer;
     transition: opacity 0.2s ease;
     font-family: inherit;
+    display: inline-block;
+    text-align: center;
+    text-decoration: none;
   }
 
   .loyalty-popup-modal__cta:hover {
@@ -361,9 +364,15 @@
         {%- endif -%}
 
         <div class="loyalty-popup-modal__actions">
-          <button type="button" class="loyalty-popup-modal__cta" data-loyalty-action="open-widget">
-            {{ section.settings.button_text }}
-          </button>
+          {%- if section.settings.button_action == 'open_link' -%}
+            <a href="{{ section.settings.button_link | default: '#' }}" class="loyalty-popup-modal__cta" data-loyalty-action="open-link">
+              {{ section.settings.button_text }}
+            </a>
+          {%- else -%}
+            <button type="button" class="loyalty-popup-modal__cta" data-loyalty-action="open-widget">
+              {{ section.settings.button_text }}
+            </button>
+          {%- endif -%}
 
           {%- if section.settings.show_no_thanks -%}
             <button type="button" class="loyalty-popup-modal__dismiss">
@@ -434,11 +443,9 @@
 
     // Wait a moment then open the Joy widget
     setTimeout(() => {
-      // Try multiple methods to open Joy widget
-      if (window.joyInstance && typeof window.joyInstance.open === 'function') {
-        window.joyInstance.open();
-      } else if (window.joyInstance && typeof window.joyInstance.toggle === 'function') {
-        window.joyInstance.toggle();
+      // Try to open Joy widget using openWidget method
+      if (window.joyInstance && typeof window.joyInstance.openWidget === 'function') {
+        window.joyInstance.openWidget();
       } else {
         // Fallback: try clicking the Joy widget launcher button
         const joyLauncher = document.querySelector('[data-joy-launcher], .joy-launcher, #joy-widget-launcher');
@@ -454,7 +461,8 @@
   // Event listeners
   const closeButton = popup.querySelector('.loyalty-popup-modal__close');
   const overlay = popup.querySelector('.loyalty-popup-modal__overlay');
-  const ctaButton = popup.querySelector('[data-loyalty-action="open-widget"]');
+  const ctaButtonWidget = popup.querySelector('[data-loyalty-action="open-widget"]');
+  const ctaButtonLink = popup.querySelector('[data-loyalty-action="open-link"]');
   const dismissButton = popup.querySelector('.loyalty-popup-modal__dismiss');
 
   if (closeButton) {
@@ -465,8 +473,15 @@
     overlay.addEventListener('click', () => closePopup(true));
   }
 
-  if (ctaButton) {
-    ctaButton.addEventListener('click', openLoyaltyWidget);
+  if (ctaButtonWidget) {
+    ctaButtonWidget.addEventListener('click', openLoyaltyWidget);
+  }
+
+  if (ctaButtonLink) {
+    ctaButtonLink.addEventListener('click', () => {
+      // Close popup and mark as dismissed when link is clicked
+      closePopup(true);
+    });
   }
 
   if (dismissButton) {
@@ -514,6 +529,29 @@
       "id": "button_text",
       "label": "Button Text",
       "default": "Sign up / Login"
+    },
+    {
+      "type": "select",
+      "id": "button_action",
+      "label": "Button Action",
+      "options": [
+        {
+          "value": "open_widget",
+          "label": "Open Joy Widget"
+        },
+        {
+          "value": "open_link",
+          "label": "Open Link"
+        }
+      ],
+      "default": "open_widget",
+      "info": "Choose whether the button opens the Joy loyalty widget or navigates to a URL"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button Link",
+      "info": "URL to navigate to when 'Open Link' is selected"
     },
     {
       "type": "select",
