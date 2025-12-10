@@ -568,8 +568,6 @@
       const savedReferralData = this.getSavedReferralData();
       if (savedReferralData) {
         console.log('📦 Found cached referral data, showing existing result');
-        // Show existing referral result
-        this.showReferralResult(savedReferralData);
         return true; // Indicate that cached data was found
       }
       return false; // No cached data found
@@ -640,18 +638,19 @@
 
         // Check if we already have cached data for this user
         const cachedData = this.getSavedReferralData();
-        if (cachedData) {
+        const referralStats =  await this.getReferralStats();
+        if (cachedData && referralStats) {
           console.log('🎯 Using cached referral data for logged-in user');
-          this.showReferralResult(cachedData);
+          this.showReferralResult(cachedData, referralStats);
         } else {
           console.log('🆕 No cached data found, generating new referral link');
           // Auto-generate referral link for logged-in users
-          await this.generateReferralForLoggedInUser(window.AVADA_JOY.customer.email);
+          await this.generateReferralForLoggedInUser(window.AVADA_JOY.customer.email, referralStats);
         }
       }
     }
 
-    async generateReferralForLoggedInUser(email) {
+    async generateReferralForLoggedInUser(email, referralStats) {
       console.log('🚀 Starting referral generation for logged-in user:', email);
       const button = this.form.querySelector('.referral-form__button');
       const originalText = button.textContent;
@@ -694,6 +693,21 @@
         button.disabled = false;
         button.textContent = originalText;
         console.warn('Auto-generation failed:', error.message);
+      }
+    }
+
+    async getReferralStats() {
+      try {
+        // Wait for Joy instance to be available
+        const joyInstance = await this.waitForJoyInstance();
+        if (!joyInstance || typeof joyInstance.generateLinkReferral !== 'function') {
+          throw new Error('Joy is not available. Please ensure Joy app is installed and enabled.');
+        }
+        const referralStats = await joyInstance.generateLinkReferral();
+        return referralStats;
+      } catch (error) {
+        // If auto-generation fails, restore form for manual submission
+        console.error('get referral stats ', error);
       }
     }
 
@@ -755,14 +769,15 @@
           throw new Error('Joy is not available. Please ensure Joy app is installed and enabled.');
         }
         const referralData = await joyInstance.generateLinkReferral(email);
+        const referralStats =  await this.getReferralStats();
         if (referralData.urlReferral) {
             referralData.url = referralData.urlReferral
         }
 
-        if (referralData && referralData.url) {
+        if (referralData && referralData.url && referralStats) {
           // Save referral data for guests
           this.saveReferralData(email, referralData);
-          this.showReferralResult(referralData);
+          this.showReferralResult(referralData, referralStats);
         } else {
           throw new Error('No referral URL generated');
         }
@@ -771,7 +786,7 @@
       }
     }
 
-    showReferralResult(referralData) {
+    showReferralResult(referralData, referralStats = null) {
       if (this.formContainer) {
         this.formContainer.style.display = 'none';
       }
@@ -780,15 +795,36 @@
         const shareText = encodeURIComponent(this.settings.shareText || 'Get €15 off your first purchase!');
         const shareUrl = encodeURIComponent(referralData.url);
 
-        this.resultContainer.innerHTML = this.createResultHTML(referralData, shareText, shareUrl);
+        this.resultContainer.innerHTML = this.createResultHTML(referralData, referralStats, shareText, shareUrl);
+
         this.resultContainer.style.display = 'block';
 
         // Add event listeners to buttons
         this.addShareEventListeners();
+
+        // Append stats in Joy Dashboard 
+        this.appendStatsToJoyDashboard(referralStats);
       }
     }
 
-    createResultHTML(referralData, shareText, shareUrl) {
+    createResultHTML(referralData, referralStats , shareText, shareUrl) {
+      if (referralStats?.isReferralLimitReached) {
+        const style = document.createElement('style');
+        style.textContent = `
+          div.Joy-Referral__Dashboard .Joy-Referral__LinkReferral {
+            pointer-events: none !important;
+            opacity: 0.3 !important;
+          }
+          div.Joy-Referral__Text.center {
+              display: -webkit-box;
+              -webkit-line-clamp: 1;
+              -webkit-box-orient: vertical;
+              overflow: hidden;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
       return `
         <div class="referral-result-success">
           <p class="referral-result-label">${this.settings.linkLabel || 'Here is your personal link:'}</p>
@@ -798,21 +834,27 @@
                    class="referral-link-display"
                    value="${referralData.url}"
                    readonly
-                   id="referral-link-${this.sectionId}">
+                   id="referral-link-${this.sectionId}"
+                   style="${referralStats?.isReferralLimitReached ? "pointer-events: none; opacity: 0.3;" : ""}"
+                   >
           </div>
 
           <div class="referral-share-buttons">
-            ${this.settings.showCopyButton !== false ? this.createShareButton('copy', 'Copy Link', this.getCopyIcon()) : ''}
+            ${this.settings.showCopyButton !== false ? this.createShareButton('copy', 'Copy Link', this.getCopyIcon(),'', referralStats?.isReferralLimitReached) : ''}
             ${this.settings.showEmailButton === true ? this.createShareButton('email', 'Share via Email', this.getEmailIcon(), `mailto:?subject=${shareText}&body=${shareText}%20${shareUrl}`) : ''}
             ${this.settings.showFacebookButton === true ? this.createShareButton('facebook', 'Share on Facebook', this.getFacebookIcon(), `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`) : ''}
             ${this.settings.showWhatsappButton === true ? this.createShareButton('whatsapp', 'Share on WhatsApp', this.getWhatsAppIcon(), `https://wa.me/?text=${shareText}%20${shareUrl}`) : ''}
           </div>
 
-          ${referralData.referralCompleteCount > 0 ? `
+          ${(referralStats?.referralCompleteCount > 0 && referralStats?.isReferralLimitReached) ? `
             <div class="referral-stats-inline">
-              <span>🎉 ${referralData.referralCompleteCount} friend${referralData.referralCompleteCount > 1 ? 's' : ''} joined</span>
+              <span>You have reached the referral limit (${referralStats?.referralCompleteCount}/${referralStats?.referralLimit})</span>
             </div>
-          ` : ''}
+          ` : (referralStats?.referralCompleteCount > 0) ? `
+            <div class="referral-stats-inline">
+              <span>🎉 ${referralStats?.referralCompleteCount} friend ${referralStats?.referralCompleteCount > 1 ? 's' : ''} has successfully joined</span>
+            </div>
+          ` : ''}  
 
           ${!window.AVADA_JOY?.customer?.email ? `
             <button type="button" class="referral-new-link-btn" data-action="generate-new">
@@ -823,13 +865,75 @@
       `;
     }
 
-    createShareButton(type, defaultText, icon, href = '') {
+     async appendStatsToJoyDashboard(referralStats) {
+
+      if (!referralStats?.referralCompleteCount || referralStats.referralCompleteCount <= 0) {
+        return;
+      }
+
+      try {
+        const linkReferralEl = await this.waitForElement(
+          '.Joy-Referral__Dashboard .Joy-Referral__LinkReferral', 
+          5000
+        );
+        if(linkReferralEl) {
+          if (linkReferralEl.parentNode.querySelector('.joy-referral-stats-appended')) {
+            return;
+          }
+
+          const statsDiv = document.createElement('div');
+          statsDiv.className = 'referral-stats-inline joy-referral-stats-appended';
+          
+            statsDiv.innerHTML =` ${(referralStats?.referralCompleteCount > 0 && referralStats?.isReferralLimitReached) ? `
+              <div class="referral-stats-inline">
+                <span>You have reached the referral limit (${referralStats?.referralCompleteCount}/${referralStats?.referralLimit})</span>
+              </div>
+            ` : (referralStats?.referralCompleteCount > 0) ? `
+              <div class="referral-stats-inline">
+                <span>🎉 ${referralStats?.referralCompleteCount} friend ${referralStats?.referralCompleteCount > 1 ? 's' : ''} has successfully joined</span>
+              </div>
+            ` : ''}`
+        
+          linkReferralEl.insertAdjacentElement('afterend', statsDiv);
+        }
+      } catch (error) {
+        console.warn('Could not append stats to Joy Dashboard:', error);
+      }
+    }
+
+    waitForElement(selector, timeout = 1000) {
+      return new Promise((resolve, reject) => {
+        const el = document.querySelector(selector);
+        if (el) return resolve(el);
+
+        let timeoutId;
+        const observer = new MutationObserver(() => {
+          const el = document.querySelector(selector);
+          if (el) {
+            observer.disconnect();
+            clearTimeout(timeoutId);
+            resolve(el);
+          }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        timeoutId = setTimeout(() => {
+          observer.disconnect();
+          reject(new Error(`Element "${selector}" not found`));
+        }, timeout);
+      });
+    }
+
+    createShareButton(type, defaultText, icon, href = '', isDisable = false) {
       const text = this.settings[`${type}ButtonText`] || defaultText;
       return `
         <button type="button"
                 class="referral-share-btn referral-${type}-btn"
                 data-share-type="${type}"
-                data-href="${href}">
+                data-href="${href}"
+                style="${isDisable ? "pointer-events: none; opacity: 0.3;" : ""}"
+                >
           ${icon}
           ${text}
         </button>
@@ -1326,7 +1430,7 @@
       "id": "title_font_size",
       "min": 20,
       "max": 48,
-      "step": 4,
+      "step": 2,
       "unit": "px",
       "label": "Title font size",
       "default": 32
